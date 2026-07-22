@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OlongBell : Server - Changelogs</title>
+    <meta name="description" content="Official update logs and version history for OlongBell Minecraft Server. Discover new features, bug fixes, balance changes, and server events.">
+    <link rel="icon" type="image/png" href="assets/fubuki_nobg_next_to_title.png">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- CSS Stylesheets -->
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/cursor.css">
+    <link rel="stylesheet" href="styles/components.css">
+</head>
+<body>
+    <!-- Ambient Background Canvas for Cursor Spotlight Grid -->
+    <canvas id="ambient-canvas"></canvas>
+    
+    <!-- Custom Glowing Cursor Follower -->
+    <div id="cursor-glow" class="cursor-glow"></div>
+    <div id="cursor-dot" class="cursor-dot"></div>
+
+    <!-- Navigation Header -->
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="#" class="brand">
+                <div class="brand-logo-wrapper">
+                    <img src="assets/fubuki_nobg_next_to_title.png" alt="OlongBell Server Logo" class="brand-logo-img">
+                </div>
+                <div class="brand-text">
+                    <span class="brand-name">OlongBell : Server</span>
+                    <span class="brand-sub">CHANGELOGS</span>
+                </div>
+            </a>
+
+            <div class="nav-actions">
+                <!-- Server IP Widget with Copy Button -->
+                <div class="server-ip-box" id="copy-ip-btn" title="Click to copy server IP">
+                    <div class="ip-status-dot"></div>
+                    <div class="ip-details">
+                        <span class="ip-label">SERVER IP</span>
+                        <span class="ip-address">onglongbel.raumasmp.online</span>
+                    </div>
+                    <button class="copy-icon-btn" aria-label="Copy Server IP">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                </div>
+
+                <!-- Theme Toggle Button -->
+                <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Screen (100vh Fullscreen Viewport) -->
+    <section class="hero-screen">
+        <!-- Top-left and Bottom-right Frame Brackets -->
+        <div class="hero-bracket hero-bracket-top-left"></div>
+        <div class="hero-bracket hero-bracket-bottom-right"></div>
+        
+        <!-- Organic Background Vector Contours -->
+        <div class="hero-organic-contour"></div>
+
+        <div class="hero-screen-container">
+            <!-- Left Column: Title & Server Info -->
+            <div class="hero-left-content">
+                <div class="hero-live-badge">
+                    <span class="live-pulse"></span>
+                    <span id="player-count">342</span> Players Online
+                </div>
+
+                <h1 class="hero-main-heading">
+                    <span class="title-brand">OlongBell : Server</span>
+                    <span class="title-sub-text">Changelogs & Updates</span>
+                </h1>
+
+                <p class="hero-tagline">
+                    The official update logbook for OlongBell Minecraft Server. Discover new features, patch notes, and world expansion events.
+                </p>
+
+                <div class="hero-btn-group">
+                    <a href="#changelogs-section" class="btn-primary-action">
+                        <i class="fa-solid fa-layer-group"></i> Explore Updates
+                    </a>
+                    <div class="hero-server-ip-pill">
+                        <i class="fa-solid fa-server"></i>
+                        <span>onglongbel.raumasmp.online</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Transparent Fubuki Character PNG -->
+            <div class="hero-right-content">
+                <div class="hero-character-wrapper">
+                    <img src="assets/fubuki_nobg_next_to_title.png" alt="Fubuki Character Transparent" class="hero-fubuki-character">
+                    <div class="character-aura-glow"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mouse Scroll Down Indicator -->
+        <a href="#changelogs-section" class="scroll-indicator" aria-label="Scroll Down">
+            <div class="mouse-icon">
+                <div class="wheel-dot"></div>
+            </div>
+            <span class="scroll-text">SCROLL TO DISCOVER</span>
+        </a>
+    </section>
+
+    <!-- Main Content Area (Appears when scrolling down) -->
+    <main class="main-wrapper" id="changelogs-section">
+        <!-- Search & Category Control Panel -->
+        <section class="control-panel reveal-on-scroll">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="search-input" placeholder="Search versions, patch notes, or keywords..." autocomplete="off">
+                <button id="clear-search-btn" class="clear-search hidden" title="Clear search">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="category-filters" id="category-filters">
+                <button class="filter-chip active" data-category="all">
+                    <i class="fa-solid fa-layer-group"></i> All
+                </button>
+                <button class="filter-chip" data-category="feature">
+                    <i class="fa-solid fa-rocket"></i> Features
+                </button>
+                <button class="filter-chip" data-category="fix">
+                    <i class="fa-solid fa-bug"></i> Bug Fixes
+                </button>
+                <button class="filter-chip" data-category="balance">
+                    <i class="fa-solid fa-scale-balanced"></i> Balance
+                </button>
+                <button class="filter-chip" data-category="performance">
+                    <i class="fa-solid fa-bolt"></i> Performance
+                </button>
+                <button class="filter-chip" data-category="event">
+                    <i class="fa-solid fa-trophy"></i> Events
+                </button>
+            </div>
+        </section>
+
+        <!-- Compact Preview Changelogs Feed Section -->
+        <section class="changelogs-container">
+            <div id="changelogs-list" class="changelogs-list">
+                <!-- Dynamic Compact Preview Cards & Fluid Section Dividers Will Be Rendered Here -->
+            </div>
+
+            <!-- Empty State when no logs match search -->
+            <div id="empty-state" class="empty-state hidden">
+                <div class="empty-icon"><i class="fa-solid fa-compass-drafting"></i></div>
+                <h3>No matching updates found</h3>
+                <p>Try searching for a different keyword or reset filters.</p>
+                <button id="reset-filters-btn" class="reset-btn">View All Updates</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-left">
+                <p>© 2026 OlongBell Minecraft Server. All rights reserved.</p>
+                <p class="footer-sub">Not affiliated with Mojang Studios or Microsoft.</p>
+            </div>
+            <div class="footer-links">
+                <a href="#" id="store-link"><i class="fa-solid fa-cart-shopping"></i> Store</a>
+                <a href="#" id="discord-link"><i class="fa-brands fa-discord"></i> Discord</a>
+                <a href="#" id="vote-link"><i class="fa-solid fa-check-to-slot"></i> Vote</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bottom Walking Fubuki GIF Mascot Container (Official Tenor Embed) -->
+    <div id="bottom-walking-mascot" class="bottom-walking-mascot">
+        <div class="mascot-embed-wrapper">
+            <div class="tenor-gif-embed" data-postid="16809453" data-share-method="host" data-aspect-ratio="0.953125" data-width="100%">
+                <a href="https://tenor.com/view/hololive-shirakami-fubuki-2d-walking-cute-gif-16809453">Hololive Shirakami Fubuki Sticker</a>
+            </div>
+            <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+        </div>
+    </div>
+
+    <!-- Full Detailed Modal Overlay -->
+    <div id="update-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <button id="close-modal-btn" class="close-modal-btn" aria-label="Close Modal">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div id="modal-content" class="modal-content">
+                <!-- Dynamic Modal Content -->
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="scripts/changelogs-data.js"></script>
+    <script src="scripts/cursor-effect.js"></script>
+    <script src="scripts/ui-interactions.js"></script>
+    <script src="scripts/app.js"></script>
+</body>
+</html>
