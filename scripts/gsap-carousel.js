@@ -199,7 +199,10 @@ class GSAP3DCylinderCarousel {
         if (shareBtn) {
             shareBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                navigator.clipboard.writeText(window.location.href).catch(() => {});
+                const shareUrl = window.location.origin + window.location.pathname + '?id=' + log.id;
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    this.uiController.showToast(`Đã sao chép liên kết chia sẻ phiên bản ${log.version}! 📋`);
+                }).catch(() => {});
             });
         }
 
@@ -208,7 +211,7 @@ class GSAP3DCylinderCarousel {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (!window.authManager || !window.authManager.isLoggedIn()) {
-                    alert("Vui lòng đăng nhập bằng tài khoản Discord ở thanh menu trên cùng để thả cảm xúc!");
+                    this.uiController.showAuthModal();
                     return;
                 }
                 this.uiController.handleReaction(log.id, btn.dataset.type);

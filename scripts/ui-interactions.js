@@ -39,6 +39,7 @@ class UIInteractions {
         this.initAuth();
         this.setupEventListeners();
         this.startOnlinePlayerSimulator();
+        this.checkInitialDeepLink();
     }
 
     initAuth() {
@@ -140,8 +141,28 @@ class UIInteractions {
 
         // ESC Key to Close Modal
         window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.modal && !this.modal.classList.contains('hidden')) {
-                this.closeModal();
+            if (e.key === 'Escape') {
+                if (this.modal && !this.modal.classList.contains('hidden')) {
+                    this.closeModal();
+                }
+                const authModal = document.getElementById('auth-modal');
+                if (authModal && !authModal.classList.contains('hidden')) {
+                    this.closeAuthModal();
+                }
+            }
+        });
+
+        // Browser Back/Forward navigation (PopState)
+        window.addEventListener('popstate', (e) => {
+            const params = new URLSearchParams(window.location.search);
+            const logId = params.get('id');
+            if (logId) {
+                const log = CHANGELOGS_DATA.find(item => item.id === logId);
+                if (log) {
+                    this.openModal(log, false);
+                }
+            } else {
+                this.closeModal(false);
             }
         });
     }
@@ -268,7 +289,10 @@ class UIInteractions {
             if (shareBtn) {
                 shareBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    navigator.clipboard.writeText(window.location.href).catch(() => {});
+                    const shareUrl = window.location.origin + window.location.pathname + '?id=' + log.id;
+                    navigator.clipboard.writeText(shareUrl).then(() => {
+                        this.showToast(`Đã sao chép liên kết chia sẻ phiên bản ${log.version}! 📋`);
+                    }).catch(() => {});
                 });
             }
 
@@ -277,7 +301,7 @@ class UIInteractions {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     if (!window.authManager || !window.authManager.isLoggedIn()) {
-                        alert("Vui lòng đăng nhập bằng tài khoản Discord ở thanh menu trên cùng để thả cảm xúc!");
+                        this.showAuthModal();
                         return;
                     }
                     this.handleReaction(logId, btn.dataset.type);
@@ -382,7 +406,7 @@ class UIInteractions {
         `;
     }
 
-    openModal(log) {
+    openModal(log, pushState = true) {
         if (!this.modal || !this.modalContent) return;
 
         this.modalContent.innerHTML = `
@@ -413,9 +437,14 @@ class UIInteractions {
         void this.modal.offsetWidth;
         this.modal.classList.add('active');
         document.body.style.overflow = 'hidden';
+
+        if (pushState) {
+            const newUrl = window.location.origin + window.location.pathname + '?id=' + log.id;
+            window.history.pushState({ logId: log.id }, '', newUrl);
+        }
     }
 
-    closeModal() {
+    closeModal(pushState = true) {
         if (!this.modal) return;
         this.modal.classList.remove('active');
         
@@ -424,6 +453,11 @@ class UIInteractions {
             this.modal.classList.add('hidden');
             document.body.style.overflow = '';
         }, 320);
+
+        if (pushState) {
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.pushState({ logId: null }, '', cleanUrl);
+        }
     }
 
     startOnlinePlayerSimulator() {
@@ -539,5 +573,116 @@ class UIInteractions {
 
         localStorage.setItem(key, JSON.stringify(reactions));
         this.renderChangelogs();
+    }
+
+    checkInitialDeepLink() {
+        const params = new URLSearchParams(window.location.search);
+        const logId = params.get('id');
+        if (logId) {
+            const log = CHANGELOGS_DATA.find(item => item.id === logId);
+            if (log) {
+                // Wait slightly for intro fade out to complete before opening
+                setTimeout(() => {
+                    this.openModal(log, false);
+                }, 2600); // 1.8s progress bar + 0.8s fade out
+            }
+        }
+    }
+
+    showToast(message) {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'toast-message';
+        toast.innerHTML = `
+            <i class="fa-solid fa-circle-check toast-icon"></i>
+            <span class="toast-text">${message}</span>
+        `;
+        container.appendChild(toast);
+
+        // Force reflow
+        void toast.offsetWidth;
+
+        // Transition entrance
+        toast.classList.add('active');
+
+        // Automatic dismissal after 3 seconds
+        setTimeout(() => {
+            toast.classList.remove('active');
+            toast.classList.add('fade-out');
+            setTimeout(() => {
+                toast.remove();
+            }, 400);
+        }, 3000);
+    }
+
+    showAuthModal() {
+        let modal = document.getElementById('auth-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'auth-modal';
+            modal.className = 'modal-overlay auth-modal-overlay hidden';
+            modal.innerHTML = `
+                <div class="modal-card auth-modal-card">
+                    <button class="close-modal-btn auth-close-btn" aria-label="Close Modal">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                    <div class="modal-content auth-modal-content">
+                        <div class="auth-prompt-wrapper">
+                            <div class="auth-prompt-icon">
+                                <i class="fa-brands fa-discord"></i>
+                            </div>
+                            <h2 class="auth-prompt-title">Yêu cầu đăng nhập</h2>
+                            <p class="auth-prompt-desc">
+                                Bạn cần đăng nhập bằng tài khoản Discord để có thể thả cảm xúc (👍, ❤️, 🔥) hoặc tham gia bình chọn ý kiến cộng đồng trên máy chủ OlongBell.
+                            </p>
+                            <button class="btn-primary-action auth-prompt-btn" id="auth-prompt-login-btn">
+                                <i class="fa-brands fa-discord"></i> Đăng nhập ngay
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Close button listener
+            const closeBtn = modal.querySelector('.auth-close-btn');
+            closeBtn.addEventListener('click', () => this.closeAuthModal());
+
+            // Click outside overlay listener
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) this.closeAuthModal();
+            });
+
+            // Login button listener
+            const loginBtn = modal.querySelector('#auth-prompt-login-btn');
+            loginBtn.addEventListener('click', () => {
+                if (window.authManager) {
+                    window.authManager.login();
+                }
+            });
+        }
+
+        // Show modal with animation
+        modal.classList.remove('hidden');
+        void modal.offsetWidth;
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    closeAuthModal() {
+        const modal = document.getElementById('auth-modal');
+        if (!modal) return;
+        modal.classList.remove('active');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }, 320);
     }
 }
