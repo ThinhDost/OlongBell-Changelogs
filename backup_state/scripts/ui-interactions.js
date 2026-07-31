@@ -19,6 +19,7 @@ class UIInteractions {
         this.searchQuery = '';
         this.currentViewMode = '3d'; // '3d' or 'grid'
         this.observer = null;
+        this.isReacting = false;
 
         // Initialize 3D Cylinder Carousel Engine
         this.cylinder3D = new GSAP3DCylinderCarousel(this);
@@ -29,21 +30,49 @@ class UIInteractions {
         this.inertiaTargetY = 0;
         this.wordPhysicsData = [];
 
+        // Vote Section Elements
+        this.voteSubmitForm = document.getElementById('vote-submit-form');
+        this.voteModNameInput = document.getElementById('vote-mod-name');
+        this.voteModUrlInput = document.getElementById('vote-mod-url');
+        this.voteUnauthPrompt = document.getElementById('vote-unauth-prompt');
+        this.voteLoginBtn = document.getElementById('vote-login-btn');
+        this.voteModsList = document.getElementById('vote-mods-list');
+        this.voteEmptyState = document.getElementById('vote-empty-state');
+        
+        this.isSubmittingMod = false;
+        this.isVotingMod = false;
+
         this.init();
     }
 
-    init() {
+    async init() {
         this.setupIntersectionObserver();
+        this.initAuth();
+        await this.loadGlobalReactions();
         this.renderChangelogs();
         this.renderSneakPeeks();
-        this.initAuth();
         this.setupEventListeners();
         this.startOnlinePlayerSimulator();
         this.checkInitialDeepLink();
+        this.updateVoteUIAuth();
+        this.loadModsAndVotes();
     }
 
     initAuth() {
         window.authManager = new DiscordAuthManager();
+    }
+
+    async loadGlobalReactions() {
+        if (!window.BACKEND_URL) return;
+        try {
+            const res = await fetch(`${window.BACKEND_URL}/api/reactions`);
+            if (res.ok) {
+                const data = await res.json();
+                window.globalReactions = data;
+            }
+        } catch (err) {
+            console.error('Lỗi khi tải reactions từ backend:', err);
+        }
     }
 
     setupEventListeners() {
@@ -114,18 +143,49 @@ class UIInteractions {
 
         // Theme Toggle Listener (Silent mode)
         if (this.themeToggleBtn) {
+            // Khởi tạo icon ban đầu khớp với trạng thái theme của trang (Dark mode thì hiện Sun để đổi sang Light, ngược lại)
+            const isInitiallyDark = document.documentElement.classList.contains('dark');
+            this.themeToggleBtn.innerHTML = isInitiallyDark ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+
             this.themeToggleBtn.addEventListener('click', () => {
                 const html = document.documentElement;
                 const isDark = html.classList.toggle('dark');
-                this.themeToggleBtn.innerHTML = isDark ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
+                this.themeToggleBtn.innerHTML = isDark ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
             });
         }
 
-        // Copy IP Listener (Silent Clipboard Copy)
+        // Copy IP Listener (Hiện toast thông báo trực quan cho người dùng)
         if (this.copyIpBtn) {
             this.copyIpBtn.addEventListener('click', () => {
                 const ipText = 'onglongbel.raumasmp.online';
-                navigator.clipboard.writeText(ipText).catch(() => {});
+                navigator.clipboard.writeText(ipText).then(() => {
+                    this.showToast('Đã sao chép địa chỉ IP máy chủ! 📋');
+                }).catch(() => {
+                    // Dự phòng nếu trình duyệt chặn Clipboard API
+                    this.showToast('Địa chỉ IP: onglongbel.raumasmp.online');
+                });
+            });
+        }
+
+        // Copy PowerShell command listener
+        const copyInstallerBtn = document.getElementById('copy-installer-btn');
+        if (copyInstallerBtn) {
+            copyInstallerBtn.addEventListener('click', () => {
+                const commandEl = document.getElementById('powershell-command');
+                if (!commandEl) return;
+                const commandText = commandEl.innerText;
+                navigator.clipboard.writeText(commandText).then(() => {
+                    copyInstallerBtn.innerHTML = '<i class="fa-solid fa-check"></i> Copied! 📋';
+                    copyInstallerBtn.classList.add('copied');
+                    this.showToast('Đã sao chép lệnh cài đặt tự động! 💻');
+                    setTimeout(() => {
+                        copyInstallerBtn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy Command';
+                        copyInstallerBtn.classList.remove('copied');
+                    }, 3000);
+                }).catch(() => {
+                    this.showToast('Lỗi: Không thể tự động sao chép!');
+                });
             });
         }
 
@@ -165,6 +225,23 @@ class UIInteractions {
                 this.closeModal(false);
             }
         });
+
+        // Submit Mod Proposal Form
+        if (this.voteSubmitForm) {
+            this.voteSubmitForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleModSubmission();
+            });
+        }
+
+        // Vote Login Button
+        if (this.voteLoginBtn) {
+            this.voteLoginBtn.addEventListener('click', () => {
+                if (window.authManager) {
+                    window.authManager.login();
+                }
+            });
+        }
     }
 
     setupIntersectionObserver() {
@@ -353,6 +430,9 @@ class UIInteractions {
         // Bổ sung Reactions Mock Database trong localStorage
         const getReactions = (logId) => {
             const defaultReactions = { like: 0, love: 0, fire: 0 };
+            if (window.BACKEND_URL && window.globalReactions && window.globalReactions[logId]) {
+                return window.globalReactions[logId];
+            }
             const stored = localStorage.getItem(`reactions_${logId}`);
             return stored ? JSON.parse(stored) : defaultReactions;
         };
@@ -551,7 +631,121 @@ class UIInteractions {
         }
     }
 
-    handleReaction(logId, type) {
+    async handleReaction(logId, type) {
+        if (this.isReacting) {
+            this.showToast('Hành động quá nhanh! Vui lòng đợi chút. ⏳');
+            return;
+        }
+
+        if (window.BACKEND_URL) {
+            const token = localStorage.getItem('discord_token');
+            if (!token) {
+                this.showAuthModal();
+                return;
+            }
+
+            // Phát âm thanh phản hồi tức thì
+            this.playReactionSound(type);
+
+            // 1. Sao lưu trạng thái cũ để phục hồi nếu gặp lỗi (Rollback state)
+            const getReactions = (id) => {
+                const defaultReactions = { like: 0, love: 0, fire: 0 };
+                if (window.globalReactions && window.globalReactions[id]) {
+                    return { ...window.globalReactions[id] };
+                }
+                const stored = localStorage.getItem(`reactions_${id}`);
+                return stored ? JSON.parse(stored) : defaultReactions;
+            };
+
+            const previousReactions = getReactions(logId);
+            const previousUserReaction = localStorage.getItem(`user_react_${logId}`);
+
+            // 2. Tính toán trạng thái mới trước (Optimistic State)
+            const nextReactions = { ...previousReactions };
+            let nextUserReaction = null;
+
+            if (previousUserReaction === type) {
+                // Click lại nút cũ -> Hủy thả tim
+                nextReactions[type] = Math.max(0, (nextReactions[type] || 0) - 1);
+                nextUserReaction = null;
+                localStorage.removeItem(`user_react_${logId}`);
+            } else {
+                // Đổi loại tim hoặc thả tim lần đầu
+                if (previousUserReaction) {
+                    nextReactions[previousUserReaction] = Math.max(0, (nextReactions[previousUserReaction] || 0) - 1);
+                }
+                nextReactions[type] = (nextReactions[type] || 0) + 1;
+                nextUserReaction = type;
+                localStorage.setItem(`user_react_${logId}`, type);
+            }
+
+            // Cập nhật ngay lập tức lên UI
+            if (!window.globalReactions) window.globalReactions = {};
+            window.globalReactions[logId] = nextReactions;
+            this.updateReactionsDOM(logId);
+
+            // 3. Gửi request mạng chạy ngầm
+            this.isReacting = true;
+            try {
+                const res = await fetch(`${window.BACKEND_URL}/api/react`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ logId, type })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    // Cập nhật số liệu chuẩn cuối cùng từ server trả về
+                    window.globalReactions = data.allReactions;
+                    if (data.userReaction) {
+                        localStorage.setItem(`user_react_${logId}`, data.userReaction);
+                    } else {
+                        localStorage.removeItem(`user_react_${logId}`);
+                    }
+                    this.updateReactionsDOM(logId);
+                } else {
+                    // Lỗi từ server -> Hoàn tác (Rollback) lại UI cũ
+                    window.globalReactions[logId] = previousReactions;
+                    if (previousUserReaction) {
+                        localStorage.setItem(`user_react_${logId}`, previousUserReaction);
+                    } else {
+                        localStorage.removeItem(`user_react_${logId}`);
+                    }
+                    this.updateReactionsDOM(logId);
+
+                    if (res.status === 401) {
+                        if (window.authManager) window.authManager.logout();
+                        this.showAuthModal();
+                    } else if (res.status === 429) {
+                        const data = await res.json();
+                        this.showToast(data.error || 'Vui lòng đợi 1 giây giữa các lượt thả tim! ⏳');
+                    } else {
+                        this.showToast('Gặp lỗi khi gửi lượt tương tác! ❌');
+                    }
+                }
+            } catch (err) {
+                console.error('Lỗi khi gửi reaction tới backend:', err);
+                // Lỗi mạng hoặc lỗi kết nối -> Hoàn tác (Rollback) lại UI cũ
+                window.globalReactions[logId] = previousReactions;
+                if (previousUserReaction) {
+                    localStorage.setItem(`user_react_${logId}`, previousUserReaction);
+                } else {
+                    localStorage.removeItem(`user_react_${logId}`);
+                }
+                this.updateReactionsDOM(logId);
+                this.showToast('Mất kết nối mạng! ❌');
+            } finally {
+                this.isReacting = false;
+            }
+            return;
+        }
+
+        // Phát âm thanh phản hồi ở chế độ Offline/Local
+        this.playReactionSound(type);
+
         const key = `reactions_${logId}`;
         const userKey = `user_react_${logId}`;
         const stored = localStorage.getItem(key);
@@ -572,7 +766,116 @@ class UIInteractions {
         }
 
         localStorage.setItem(key, JSON.stringify(reactions));
-        this.renderChangelogs();
+        this.updateReactionsDOM(logId);
+    }
+
+    playReactionSound(type) {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            const now = ctx.currentTime;
+            
+            if (type === 'like') {
+                // 👍: Nốt nhạc sine trong sáng, nảy và ngắn
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(300, now + 0.08);
+                
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                
+                osc.start(now);
+                osc.stop(now + 0.08);
+            } else if (type === 'love') {
+                // ❤️: Âm thanh ấm áp (triangle), âm hưởng nốt tròn dày hơn
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(350, now);
+                osc.frequency.exponentialRampToValueAtTime(180, now + 0.15);
+                
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } else if (type === 'fire') {
+                // 🔥: Hiệu ứng trượt tần số cao tạo cảm giác xèo xèo/sét đánh (Chirp)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(450, now);
+                osc.frequency.exponentialRampToValueAtTime(900, now + 0.06);
+                
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+                
+                osc.start(now);
+                osc.stop(now + 0.06);
+            }
+        } catch (e) {
+            console.warn("Không thể phát âm thanh phản hồi:", e);
+        }
+    }
+
+    updateReactionsDOM(logId) {
+        // Lấy reactions mới nhất
+        const getReactions = (id) => {
+            const defaultReactions = { like: 0, love: 0, fire: 0 };
+            if (window.BACKEND_URL && window.globalReactions && window.globalReactions[id]) {
+                return window.globalReactions[id];
+            }
+            const stored = localStorage.getItem(`reactions_${id}`);
+            return stored ? JSON.parse(stored) : defaultReactions;
+        };
+
+        const reactions = getReactions(logId);
+        const userReaction = localStorage.getItem(`user_react_${logId}`);
+
+        // Tìm tất cả các khối reaction có cùng logId trên trang (bao gồm cả Feed và Carousel)
+        const containers = document.querySelectorAll(`.card-reactions[data-log-id="${logId}"]`);
+        
+        containers.forEach(container => {
+            // Cập nhật nút Like
+            const likeBtn = container.querySelector('.react-btn[data-type="like"]');
+            if (likeBtn) {
+                if (userReaction === 'like') {
+                    likeBtn.classList.add('has-reacted');
+                } else {
+                    likeBtn.classList.remove('has-reacted');
+                }
+                const countSpan = likeBtn.querySelector('.count');
+                if (countSpan) countSpan.textContent = reactions.like || 0;
+            }
+
+            // Cập nhật nút Love
+            const loveBtn = container.querySelector('.react-btn[data-type="love"]');
+            if (loveBtn) {
+                if (userReaction === 'love') {
+                    loveBtn.classList.add('has-reacted');
+                } else {
+                    loveBtn.classList.remove('has-reacted');
+                }
+                const countSpan = loveBtn.querySelector('.count');
+                if (countSpan) countSpan.textContent = reactions.love || 0;
+            }
+
+            // Cập nhật nút Fire
+            const fireBtn = container.querySelector('.react-btn[data-type="fire"]');
+            if (fireBtn) {
+                if (userReaction === 'fire') {
+                    fireBtn.classList.add('has-reacted');
+                } else {
+                    fireBtn.classList.remove('has-reacted');
+                }
+                const countSpan = fireBtn.querySelector('.count');
+                if (countSpan) countSpan.textContent = reactions.fire || 0;
+            }
+        });
     }
 
     checkInitialDeepLink() {
@@ -684,5 +987,351 @@ class UIInteractions {
             modal.classList.add('hidden');
             document.body.style.overflow = '';
         }, 320);
+    }
+
+    updateVoteUIAuth() {
+        const isLoggedIn = window.authManager && window.authManager.isLoggedIn();
+        if (isLoggedIn) {
+            if (this.voteSubmitForm) this.voteSubmitForm.classList.remove('hidden');
+            if (this.voteUnauthPrompt) this.voteUnauthPrompt.classList.add('hidden');
+        } else {
+            if (this.voteSubmitForm) this.voteSubmitForm.classList.add('hidden');
+            if (this.voteUnauthPrompt) this.voteUnauthPrompt.classList.remove('hidden');
+        }
+    }
+
+    async loadModsAndVotes() {
+        if (!this.voteModsList) return;
+        
+        // Show loading state
+        this.voteModsList.innerHTML = `
+            <div class="vote-loading">
+                <i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải danh sách bình chọn...
+            </div>
+        `;
+        if (this.voteEmptyState) this.voteEmptyState.classList.add('hidden');
+
+        let mods = [];
+        
+        if (window.BACKEND_URL) {
+            try {
+                const res = await fetch(`${window.BACKEND_URL}/api/votes`);
+                if (res.ok) {
+                    mods = await res.json();
+                } else {
+                    console.error('Lỗi khi tải danh sách mod từ backend');
+                }
+            } catch (err) {
+                console.error('Lỗi mạng khi tải danh sách mod:', err);
+            }
+        } else {
+            // Offline fallback from local storage
+            const stored = localStorage.getItem('vote_mods_offline');
+            mods = stored ? JSON.parse(stored) : [];
+        }
+
+        this.renderVoteMods(mods);
+    }
+
+    renderVoteMods(mods) {
+        if (!this.voteModsList) return;
+        
+        this.voteModsList.innerHTML = '';
+        
+        if (!mods || mods.length === 0) {
+            if (this.voteEmptyState) this.voteEmptyState.classList.remove('hidden');
+            return;
+        }
+        
+        if (this.voteEmptyState) this.voteEmptyState.classList.add('hidden');
+
+        // Sắp xếp danh sách mod: nhiều vote nhất lên đầu
+        const sortedMods = [...mods].sort((a, b) => {
+            const votesA = a.voters ? a.voters.length : 0;
+            const votesB = b.voters ? b.voters.length : 0;
+            return votesB - votesA;
+        });
+
+        const currentUserId = window.authManager && window.authManager.user ? window.authManager.user.id : null;
+
+        let htmlBuffer = '';
+        sortedMods.forEach(mod => {
+            const votesCount = mod.voters ? mod.voters.length : 0;
+            const hasVoted = currentUserId && mod.voters && mod.voters.includes(currentUserId);
+            
+            // Check host to display badge icon
+            let hostIcon = '<i class="fa-solid fa-link"></i>';
+            if (mod.url.includes('curseforge.com')) {
+                hostIcon = '<i class="fa-solid fa-puzzle-piece" style="color: #ff5a00;"></i>';
+            } else if (mod.url.includes('modrinth.com')) {
+                hostIcon = '<i class="fa-solid fa-leaf" style="color: #1bd96a;"></i>';
+            }
+
+            htmlBuffer += `
+                <div class="vote-mod-card" id="mod-${mod.id}">
+                    <div class="vote-mod-info">
+                        <div class="vote-mod-name-row">
+                            <span class="vote-mod-name" title="${mod.name}">${mod.name}</span>
+                            <a href="${mod.url}" target="_blank" rel="noopener noreferrer" class="vote-mod-link" title="Xem trên web">
+                                ${hostIcon} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.75rem;"></i>
+                            </a>
+                        </div>
+                        <div class="vote-mod-suggested-by">
+                            <img src="${mod.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=' + mod.suggestedBy}" alt="Avatar">
+                            <span>Đề xuất bởi <strong>${mod.suggestedBy}</strong></span>
+                        </div>
+                    </div>
+                    <button class="btn-vote ${hasVoted ? 'has-voted' : ''}" data-mod-id="${mod.id}" title="${hasVoted ? 'Hủy bình chọn' : 'Bình chọn cho mod này'}">
+                        <i class="fa-solid fa-heart vote-icon"></i>
+                        <span class="vote-count">${votesCount}</span>
+                    </button>
+                </div>
+            `;
+        });
+
+        this.voteModsList.innerHTML = htmlBuffer;
+
+        // Attach event listeners to upvote buttons
+        this.voteModsList.querySelectorAll('.btn-vote').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!window.authManager || !window.authManager.isLoggedIn()) {
+                    this.showAuthModal();
+                    return;
+                }
+                const modId = btn.dataset.modId;
+                this.handleModVote(modId);
+            });
+        });
+    }
+
+    async handleModSubmission() {
+        if (this.isSubmittingMod) return;
+        
+        const name = this.voteModNameInput.value.trim();
+        const url = this.voteModUrlInput.value.trim();
+        
+        if (!name || !url) return;
+
+        // Frontend validation for CurseForge/Modrinth links
+        let isValidUrl = false;
+        try {
+            const parsed = new URL(url);
+            const hostname = parsed.hostname.replace('www.', '');
+            if (hostname === 'curseforge.com') {
+                isValidUrl = parsed.pathname.includes('/mc-mods/');
+            } else if (hostname === 'modrinth.com') {
+                isValidUrl = parsed.pathname.includes('/mod/') || parsed.pathname.includes('/project/');
+            }
+        } catch (e) {}
+
+        if (!isValidUrl) {
+            this.showToast('Link đề xuất phải là liên kết mod từ curseforge.com hoặc modrinth.com! ❌');
+            return;
+        }
+
+        this.isSubmittingMod = true;
+        const submitBtn = this.voteSubmitForm.querySelector('.vote-submit-btn');
+        const originalBtnHTML = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Đang gửi...';
+        submitBtn.disabled = true;
+
+        if (window.BACKEND_URL) {
+            const token = localStorage.getItem('discord_token');
+            try {
+                const res = await fetch(`${window.BACKEND_URL}/api/submit-mod`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ name, url })
+                });
+
+                if (res.ok) {
+                    const updatedMods = await res.json();
+                    this.renderVoteMods(updatedMods);
+                    this.voteModNameInput.value = '';
+                    this.voteModUrlInput.value = '';
+                    this.showToast('Đã gửi đề xuất mod thành công! 🎉');
+                    this.playVoteSound(true);
+                } else {
+                    const data = await res.json();
+                    this.showToast(data.error || 'Lỗi khi gửi đề xuất! ❌');
+                }
+            } catch (err) {
+                console.error('Lỗi mạng khi gửi đề xuất mod:', err);
+                this.showToast('Lỗi kết nối mạng! ❌');
+            } finally {
+                this.isSubmittingMod = false;
+                submitBtn.innerHTML = originalBtnHTML;
+                submitBtn.disabled = false;
+            }
+        } else {
+            // Local/offline simulation
+            const stored = localStorage.getItem('vote_mods_offline');
+            const mods = stored ? JSON.parse(stored) : [];
+            
+            // Check duplicates
+            const isDuplicate = mods.some(m => m.url === url);
+            if (isDuplicate) {
+                this.showToast('Mod này đã được đề xuất trước đó! ❌');
+                this.isSubmittingMod = false;
+                submitBtn.innerHTML = originalBtnHTML;
+                submitBtn.disabled = false;
+                return;
+            }
+
+            const user = window.authManager.user;
+            const newMod = {
+                id: Math.random().toString(36).substring(2, 15),
+                name,
+                url,
+                suggestedBy: user.username,
+                avatar: user.avatar,
+                voters: [user.id]
+            };
+
+            mods.push(newMod);
+            localStorage.setItem('vote_mods_offline', JSON.stringify(mods));
+            this.renderVoteMods(mods);
+            this.voteModNameInput.value = '';
+            this.voteModUrlInput.value = '';
+            this.showToast('Đã gửi đề xuất mod thành công (Offline)! 🎉');
+            this.playVoteSound(true);
+            
+            this.isSubmittingMod = false;
+            submitBtn.innerHTML = originalBtnHTML;
+            submitBtn.disabled = false;
+        }
+    }
+
+    async handleModVote(modId) {
+        if (this.isVotingMod) return;
+
+        this.isVotingMod = true;
+        const currentUserId = window.authManager && window.authManager.user ? window.authManager.user.id : null;
+        if (!currentUserId) {
+            this.showAuthModal();
+            this.isVotingMod = false;
+            return;
+        }
+
+        // Optimistic UI updates
+        const card = document.getElementById(`mod-${modId}`);
+        const btn = card ? card.querySelector('.btn-vote') : null;
+        const countSpan = btn ? btn.querySelector('.vote-count') : null;
+        
+        let previousVoters = [];
+        let modIndex = -1;
+        let modsBackup = [];
+
+        // Save backup and perform optimistic update locally
+        if (!window.BACKEND_URL) {
+            const stored = localStorage.getItem('vote_mods_offline');
+            modsBackup = stored ? JSON.parse(stored) : [];
+            modIndex = modsBackup.findIndex(m => m.id === modId);
+            if (modIndex !== -1) {
+                previousVoters = [...modsBackup[modIndex].voters];
+            }
+        }
+
+        let isVoteIn = true;
+        if (btn) {
+            if (btn.classList.contains('has-voted')) {
+                btn.classList.remove('has-voted');
+                if (countSpan) countSpan.textContent = Math.max(0, parseInt(countSpan.textContent) - 1);
+                isVoteIn = false;
+            } else {
+                btn.classList.add('has-voted');
+                if (countSpan) countSpan.textContent = parseInt(countSpan.textContent) + 1;
+                isVoteIn = true;
+            }
+            this.playVoteSound(isVoteIn);
+        }
+
+        if (window.BACKEND_URL) {
+            const token = localStorage.getItem('discord_token');
+            try {
+                const res = await fetch(`${window.BACKEND_URL}/api/vote-mod`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ modId })
+                });
+
+                if (res.ok) {
+                    const updatedMods = await res.json();
+                    this.renderVoteMods(updatedMods);
+                } else {
+                    // Rollback UI
+                    this.showToast('Lỗi khi bình chọn! ❌');
+                    this.loadModsAndVotes(); // Reload from server
+                }
+            } catch (err) {
+                console.error('Lỗi mạng khi bình chọn mod:', err);
+                this.showToast('Lỗi kết nối mạng! ❌');
+                this.loadModsAndVotes(); // Reload
+            } finally {
+                this.isVotingMod = false;
+            }
+        } else {
+            // Local storage simulation
+            if (modIndex !== -1) {
+                const mod = modsBackup[modIndex];
+                const voterIdx = mod.voters.indexOf(currentUserId);
+                if (voterIdx === -1) {
+                    mod.voters.push(currentUserId);
+                } else {
+                    mod.voters.splice(voterIdx, 1);
+                }
+                localStorage.setItem('vote_mods_offline', JSON.stringify(modsBackup));
+                this.renderVoteMods(modsBackup);
+            }
+            this.isVotingMod = false;
+        }
+    }
+
+    playVoteSound(isVoteIn) {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            const now = ctx.currentTime;
+            osc.type = 'sine';
+            
+            if (isVoteIn) {
+                // Chime tone: two short notes (E.g. C5 then G5)
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(783.99, now + 0.08); // G5
+                
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                
+                osc.start(now);
+                osc.stop(now + 0.25);
+            } else {
+                // Short low drop tone for unvoting
+                osc.frequency.setValueAtTime(392.00, now); // G4
+                osc.frequency.exponentialRampToValueAtTime(261.63, now + 0.12); // C4
+                
+                gain.gain.setValueAtTime(0.10, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+                
+                osc.start(now);
+                osc.stop(now + 0.12);
+            }
+        } catch (e) {
+            console.warn("Không thể phát âm thanh bình chọn:", e);
+        }
     }
 }

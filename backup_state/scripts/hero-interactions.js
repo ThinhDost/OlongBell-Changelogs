@@ -46,6 +46,8 @@ class HeroInteractions {
                         }
                         // Intro biến mất -> Đánh thức trang chính
                         this.playEntranceAnimations();
+                        // Phát giọng nói chào mừng & hiện phụ đề anime
+                        this.showJapaneseSubtitle();
                     }
                 });
             }
@@ -92,6 +94,43 @@ class HeroInteractions {
             ease: "power2.out",
             delay: 0.3
         });
+    }
+
+    showJapaneseSubtitle() {
+        // Tạo element subtitle
+        const sub = document.createElement('div');
+        sub.className = 'japanese-subtitle';
+        sub.innerText = '私たちの土地へようこそ！';
+        document.body.appendChild(sub);
+
+        // Chạy âm thanh Intro-Voice
+        const introVoice = new Audio('assets/music/Intro-Voice.mp3');
+        introVoice.volume = 0.8;
+        introVoice.play().catch(err => {
+            console.log("Audio play blocked by browser policy. Will play on first user interaction.", err);
+        });
+
+        // Thiết lập vị trí ban đầu lệch xuống dưới và ẩn đi
+        gsap.set(sub, { y: 40, opacity: 0 });
+
+        // Tạo chuỗi hoạt ảnh trượt lên và mờ dần biến mất
+        gsap.timeline()
+            .to(sub, {
+                opacity: 1,
+                y: 0,
+                duration: 0.8,
+                ease: 'power2.out'
+            })
+            .to(sub, {
+                opacity: 0,
+                y: -30,
+                duration: 0.8,
+                delay: 2.2, // hiển thị trong 2.2 giây
+                ease: 'power2.in',
+                onComplete: () => {
+                    sub.remove();
+                }
+            });
     }
 
     initMagneticButton() {

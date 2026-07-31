@@ -6,12 +6,16 @@
             history.scrollRestoration = 'manual';
         }
         window.scrollTo(0, 0);
+
+        // Luôn áp dụng chế độ tối (Dark mode)
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OlongBell : Server - Changelogs</title>
     <meta name="description" content="Official update logs and version history for OlongBell Minecraft Server. Discover new features, bug fixes, balance changes, and server events.">
-    <link rel="icon" type="image/png" href="assets/fubuki_nobg_next_to_title.png">
+    <link rel="icon" type="image/webp" href="assets/fubuki_nobg_next_to_title.webp">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,7 +34,7 @@
     <!-- Intro Loading Screen -->
     <div id="intro-screen">
         <div class="intro-content">
-            <img src="assets/fubuki_sleep-removebg.png" alt="Sleeping Fubuki" class="intro-character">
+            <img src="assets/fubuki_sleep-removebg.webp" alt="Sleeping Fubuki" class="intro-character">
             <div class="intro-loading-text">
                 <span>Waking up</span><span class="dots">...</span>
             </div>
@@ -44,7 +48,6 @@
     <canvas id="ambient-canvas"></canvas>
     
     <!-- Custom Glowing Cursor Follower -->
-    <div id="cursor-glow" class="cursor-glow"></div>
     <div id="cursor-dot" class="cursor-dot"></div>
 
     <!-- Navigation Header -->
@@ -52,7 +55,7 @@
         <div class="nav-container">
             <a href="#" class="brand">
                 <div class="brand-logo-wrapper">
-                    <img src="assets/fubuki_nobg_next_to_title.png" alt="OlongBell Server Logo" class="brand-logo-img">
+                    <img src="assets/fubuki_nobg_next_to_title.webp" alt="OlongBell Server Logo" class="brand-logo-img">
                 </div>
                 <div class="brand-text">
                     <span class="brand-name">OlongBell : Server</span>
@@ -87,10 +90,7 @@
                     </div>
                 </div>
 
-                <!-- Theme Toggle Button -->
-                <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme">
-                    <i class="fa-solid fa-moon"></i>
-                </button>
+
             </div>
         </div>
     </header>
@@ -135,7 +135,7 @@
             <!-- Right Column: Transparent Fubuki Character PNG -->
             <div class="hero-right-content">
                 <div class="hero-character-wrapper">
-                    <img src="assets/fubuki_nobg_next_to_title.png" alt="Fubuki Character Transparent" class="hero-fubuki-character">
+                    <img src="assets/fubuki_nobg_next_to_title.webp" alt="Fubuki Character Transparent" class="hero-fubuki-character">
                     <div class="character-aura-glow"></div>
                 </div>
             </div>
@@ -244,15 +244,113 @@
             </div>
         </section>
 
-        <!-- Vote Update Coming Soon Section -->
+        <!-- Vote Update Section -->
         <section class="vote-section reveal-on-scroll" id="vote-section">
             <span class="vote-badge"><i class="fa-solid fa-square-poll-vertical"></i> Community Decision</span>
             <h2 class="vote-title">Quyết Định Bản Cập Nhật Tiếp Theo</h2>
             <p class="vote-description">
-                Ý kiến của bạn là ưu tiên phát triển của chúng tôi. Hãy bình chọn cho các mod, tính năng hoặc sự kiện mà bạn muốn thấy xuất hiện tiếp theo trên OlongBell Server.
+                Ý kiến của bạn là ưu tiên phát triển của chúng tôi. Hãy bình chọn cho các mod bạn muốn thấy xuất hiện tiếp theo trên OlongBell Server (phiên bản bắt buộc phải hỗ trợ 26.2 Fabric).
             </p>
-            <div class="vote-coming-soon">
-                <i class="fa-solid fa-hourglass-half"></i> Coming Soon!
+            
+            <div class="vote-content-grid">
+                <!-- Cột trái: Form đề xuất -->
+                <div class="vote-form-container">
+                    <h3 class="vote-form-title"><i class="fa-solid fa-paper-plane"></i> Đề xuất Mod mới</h3>
+                    
+                    <!-- Form khi đã đăng nhập -->
+                    <form id="vote-submit-form" class="vote-submit-form hidden">
+                        <div class="form-group">
+                            <label for="vote-mod-name">Tên Mod</label>
+                            <input type="text" id="vote-mod-name" placeholder="Ví dụ: Sodium, Just Enough Items..." required maxlength="60">
+                        </div>
+                        <div class="form-group">
+                            <label for="vote-mod-url">Link Mod (CurseForge / Modrinth)</label>
+                            <input type="url" id="vote-mod-url" placeholder="https://modrinth.com/mod/... hoặc https://curseforge.com/..." required>
+                        </div>
+                        <div class="vote-rules-box">
+                            <div class="rule-item">
+                                <i class="fa-solid fa-circle-check text-green"></i>
+                                <span>Chỉ chấp nhận link từ <strong>CurseForge</strong> hoặc <strong>Modrinth</strong>.</span>
+                            </div>
+                            <div class="rule-item">
+                                <i class="fa-solid fa-circle-check text-green"></i>
+                                <span>Phiên bản bắt buộc phải hỗ trợ <strong>26.2 Fabric</strong>.</span>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary-action vote-submit-btn">
+                            <i class="fa-solid fa-plus"></i> Gửi đề xuất
+                        </button>
+                    </form>
+
+                    <!-- Lời nhắc khi chưa đăng nhập -->
+                    <div id="vote-unauth-prompt" class="vote-unauth-prompt">
+                        <i class="fa-brands fa-discord prompt-icon"></i>
+                        <p>Đăng nhập Discord để gửi đề xuất mod và bình chọn các bản cập nhật sắp tới!</p>
+                        <button id="vote-login-btn" class="discord-login-btn">
+                            <i class="fa-brands fa-discord"></i> Đăng nhập ngay
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Cột phải: Danh sách mod đề xuất & vote -->
+                <div class="vote-list-container">
+                    <h3 class="vote-list-title"><i class="fa-solid fa-list-check"></i> Đề xuất từ cộng đồng</h3>
+                    
+                    <div id="vote-mods-list" class="vote-mods-list">
+                        <div class="vote-loading">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải danh sách bình chọn...
+                        </div>
+                    </div>
+                    
+                    <div id="vote-empty-state" class="vote-empty-state hidden">
+                        <i class="fa-solid fa-box-open"></i>
+                        <p>Chưa có đề xuất nào. Hãy là người đầu tiên!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Mod Installation Guide Section -->
+        <section class="mod-install-section reveal-on-scroll" id="mod-install-section">
+            <div class="install-container">
+                <!-- Cột thông tin bên trái -->
+                <div class="install-info">
+                    <span class="install-badge"><i class="fa-solid fa-terminal"></i> Quick Setup</span>
+                    <h2 class="install-title">Cài Đặt Bộ Mod Khởi Động</h2>
+                    <p class="install-description">
+                        Để tham gia máy chủ OlongBell, bạn cần cài đặt đúng bộ Mod tương thích. Nhằm tối giản hóa các bước cài đặt thủ công phức tạp, chúng tôi cung cấp trình cài đặt tự động.
+                    </p>
+                    <ul class="install-steps">
+                        <li><span class="step-num">1</span> Sao chép câu lệnh PowerShell bên cạnh.</li>
+                        <li><span class="step-num">2</span> Nhấn phím <kbd>Windows</kbd>, gõ <strong>PowerShell</strong> và nhấn <kbd>Enter</kbd>.</li>
+                        <li><span class="step-num">3</span> Chuột phải (hoặc nhấn <kbd>Ctrl + V</kbd>) để dán câu lệnh và nhấn <kbd>Enter</kbd>.</li>
+                    </ul>
+                    <div class="install-note">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span>Trình cài đặt sẽ tự động tải các file Mod cần thiết và đưa trực tiếp vào thư mục <code>.minecraft/mods</code> của bạn.</span>
+                    </div>
+                </div>
+
+                <!-- Cột giả lập Terminal bên phải -->
+                <div class="install-terminal">
+                    <div class="terminal-header">
+                        <div class="terminal-buttons">
+                            <span class="term-btn term-close"></span>
+                            <span class="term-btn term-minimize"></span>
+                            <span class="term-btn term-maximize"></span>
+                        </div>
+                        <div class="terminal-title">olongbell-installer.ps1</div>
+                    </div>
+                    <div class="terminal-body">
+                        <div class="code-line">
+                            <span class="prompt">PS C:\Users\OlongBell></span>
+                            <code id="powershell-command">irm https://raw.githubusercontent.com/QuangquyNguyenvo/MineServer/main/26.2/UpdateMinecraftMods.ps1 | iex</code>
+                        </div>
+                        <button class="terminal-copy-btn" id="copy-installer-btn" title="Click để sao chép lệnh">
+                            <i class="fa-regular fa-copy"></i> Copy Command
+                        </button>
+                    </div>
+                </div>
             </div>
         </section>
     </main>
@@ -279,6 +377,65 @@
         </div>
     </div>
 
+    <!-- Floating Music Player -->
+    <div id="floating-music-player" class="music-player-widget collapsed reveal-on-scroll">
+        <!-- Mute/Play Mini Button (Visible when collapsed) -->
+        <button id="music-toggle-btn" class="music-toggle-btn" title="Phát/Dừng nhạc nền">
+            <div class="music-disc">
+                <img id="music-disc-img" src="assets/shirakami-fubuki-hololive_nobg.gif" alt="Music Cover" class="disc-img">
+            </div>
+            <!-- Mini Sound Waves Animation -->
+            <div class="music-waves">
+                <span class="wave-bar"></span>
+                <span class="wave-bar"></span>
+                <span class="wave-bar"></span>
+            </div>
+        </button>
+
+        <!-- Detailed Player Panel -->
+        <div class="music-player-panel">
+            <div class="player-header">
+                <span class="player-title">MUSIC PLAYER</span>
+                <button id="music-close-panel-btn" class="player-minimize-btn" title="Thu nhỏ">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <!-- Track Info -->
+            <div class="track-info">
+                <span id="current-track-title" class="track-title">Đang tải nhạc...</span>
+                <span class="track-artist">OlongBell OST</span>
+            </div>
+
+            <!-- Player Controls -->
+            <div class="player-controls">
+                <button id="prev-track-btn" class="ctrl-btn" title="Bài trước"><i class="fa-solid fa-backward-step"></i></button>
+                <button id="play-pause-btn" class="ctrl-btn play-main-btn" title="Phát/Tạm dừng"><i class="fa-solid fa-play"></i></button>
+                <button id="next-track-btn" class="ctrl-btn" title="Bài tiếp"><i class="fa-solid fa-forward-step"></i></button>
+            </div>
+
+            <!-- Volume Control -->
+            <div class="volume-control">
+                <i id="volume-icon" class="fa-solid fa-volume-high"></i>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.75">
+                <span id="volume-percentage" class="volume-percentage">75%</span>
+            </div>
+
+            <!-- Custom Playlist Container -->
+            <div class="playlist-container">
+                <div class="playlist-header">
+                    <i class="fa-solid fa-list-ul"></i> DANH SÁCH BÀI HÁT
+                </div>
+                <ul id="playlist-ul" class="playlist-ul">
+                    <!-- Sẽ được kết xuất động bằng JS -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- HTML5 Audio Element -->
+    <audio id="bg-audio"></audio>
+
     <!-- Full Detailed Modal Overlay -->
     <div id="update-modal" class="modal-overlay hidden">
         <div class="modal-card">
@@ -302,6 +459,7 @@
     <script src="scripts/hero-interactions.js"></script>
     <script src="scripts/lenis-smooth-scroll.js"></script>
     <script src="scripts/auth.js"></script>
+    <script src="scripts/music-player.js"></script>
     <script src="scripts/ui-interactions.js"></script>
     <script src="scripts/app.js"></script>
 </body>

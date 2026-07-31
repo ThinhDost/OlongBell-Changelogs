@@ -2,7 +2,6 @@ class AmbientCursorEffect {
     constructor() {
         this.canvas = document.getElementById('ambient-canvas');
         this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
-        this.cursorGlow = document.getElementById('cursor-glow');
         this.cursorDot = document.getElementById('cursor-dot');
         
         // Mouse Coordinates & Lerp Physics
@@ -85,10 +84,6 @@ class AmbientCursorEffect {
         this.mouse.x += (this.target.x - this.mouse.x) * this.lerpAmount;
         this.mouse.y += (this.target.y - this.mouse.y) * this.lerpAmount;
 
-        // Position DOM Cursor Glow Element
-        if (this.cursorGlow) {
-            this.cursorGlow.style.transform = `translate3d(${this.mouse.x}px, ${this.mouse.y}px, 0)`;
-        }
         if (this.cursorDot) {
             this.cursorDot.style.transform = `translate3d(${this.target.x}px, ${this.target.y}px, 0)`;
         }

@@ -36,6 +36,8 @@ html {
     --accent-warm-rose: #e56b6f;
     --accent-cyan: #6bcde8;
     --accent-cyan-light: rgba(107, 205, 232, 0.15);
+    --cyan-primary: var(--accent-cyan);
+    --gold-primary: var(--primary);
 
     --spotlight-color: rgba(201, 154, 76, 0.08);
     --dot-color: rgba(140, 132, 117, 0.16);
@@ -72,6 +74,8 @@ html {
     
     --accent-cyan: #8ed4e8;
     --accent-cyan-light: rgba(142, 212, 232, 0.12);
+    --cyan-primary: var(--accent-cyan);
+    --gold-primary: var(--primary);
 
     --spotlight-color: rgba(214, 172, 104, 0.12);
     --dot-color: rgba(255, 255, 255, 0.06);

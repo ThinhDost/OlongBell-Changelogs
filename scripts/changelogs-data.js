@@ -1,5 +1,50 @@
 const CHANGELOGS_DATA = [
     {
+        id: "v2.0.0",
+        version: "v2.0",
+        title: "Siêu Bản Cập Nhật 2.0 — Đại Trùng Tu Thế Giới & Nghệ Thuật Kiến Trúc 🎭🏰",
+        date: "25 Tháng 7, 2026",
+        author: "ThinhDost",
+        authorAvatar: "https://api.dicebear.com/7.x/bottts/svg?seed=ThinhDost",
+        categories: ["feature", "performance"],
+        summary: "Siêu bản cập nhật 2.0 chính thức đổ bộ OlongBell! Mang đến cuộc cách mạng về cơ chế chiến đấu tối tân, đại tu pháo đài Nether nguy hiểm, sinh vật đại dương phong phú, trang phục hóa trang độc đáo và hàng trăm khối nội thất trang trí lộng lẫy.",
+        image: "assets/red_tentacle.gif",
+        sections: [
+            {
+                heading: "⚔️ Cách Mạng Chiến Đấu & Trang Bị",
+                items: [
+                    "<b>Combat Nouveau:</b> Tối ưu hóa cơ chế chiến đấu! Tự động tấn công khi giữ chuột, loại bỏ thời gian hồi chiêu khi chuyển vũ khí và cường hóa sức mạnh phòng thủ/đẩy lùi của khiên.",
+                    "<b>Immersive Armors & Trim Effects:</b> Khoác lên mình những bộ giáp 3D tuyệt đẹp (áo choàng, giáp nặng) kèm theo các hiệu ứng tăng chỉ số độc đáo dựa trên hoa văn rèn giáp (Armor Trim).",
+                    "<b>Stronger Snowballs:</b> Snowball giờ đây gây sát thương và đẩy lùi, mở ra những trận chiến tuyết vô cùng thú vị."
+                ]
+            },
+            {
+                heading: "🌊 Chinh Phục Pháo Đài & Biển Cả",
+                items: [
+                    "<b>Fortress of War:</b> Nether Fortress được đại tu hoành tráng với cấu trúc hiểm trở, bẫy rập ranh ma, hòm kho báu mới và cuộc đối đầu Boss nghẹt thở.",
+                    "<b>Sea Life & Climate Rivers:</b> Làm sống động lòng đại dương với các loài cá mới, hệ thống lồng ấp, bẫy cá chuyên nghiệp và màu sắc sông ngòi thay đổi theo thời tiết.",
+                    "<b>Shroomcraft:</b> Khai phá quần xã nấm kỳ ảo, các khối gỗ sắc màu mới và loài gà cluckshroom độc lạ."
+                ]
+            },
+            {
+                heading: "🏡 Mỹ Thuật Xây Dựng & Trang Trí Macaw",
+                items: [
+                    "<b>Macaw's Mega Pack:</b> Bước đột phá về kiến trúc! Bổ sung hàng trăm khối trang trí chất lượng cao gồm nội thất, cầu gỗ, cửa sổ, cửa ra vào, mái nhà, lan can và hệ thống đèn lung linh.",
+                    "<b>Immersive Paintings & Connected Glass:</b> Tự do đưa ảnh bất kỳ từ internet vào game làm tranh treo tường và xây dựng những tấm kính liền mạch cực kỳ mượt mà."
+                ]
+            },
+            {
+                heading: "🎭 Hóa Trang Dân Làng & Đời Sống Tiện Nghi",
+                items: [
+                    "<b>Village Masquerade:</b> Đeo mặt nạ hóa trang thành dân làng để nhận ưu đãi giảm giá thương mại cực lớn, hoặc đóng vai Illager để ngụy trang né tránh quái vật tấn công.",
+                    "<b>Cooking for Blockheads:</b> Thiết lập gian bếp hiện đại với tủ lạnh, lò nướng, tủ bếp để tự động hóa công thức chế biến những món ăn tăng lực mạnh mẽ.",
+                    "<b>Just Hammers:</b> Khai thác khoáng sản cực nhanh với búa đào mỏ chuyên dụng phá đá diện tích rộng 3x3.",
+                    "<b>Arcane Lanterns & Magnum Torch:</b> Đèn ma thuật tăng tốc độ di chuyển/hồi máu xung quanh và đuốc khổng lồ ngăn chặn hoàn toàn quái vật spawn trong bán kính cực lớn."
+                ]
+            }
+        ]
+    },
+    {
         id: "v1.0.0",
         version: "v1.0",
         title: "Bản Cập Nhật v1.0 — Cơ Chế Chiến Đấu, Sinh Vật & Lãnh Địa Làng Mạc 🍁",
@@ -8,7 +53,7 @@ const CHANGELOGS_DATA = [
         authorAvatar: "https://api.dicebear.com/7.x/bottts/svg?seed=ThinhDost",
         categories: ["feature", "performance"],
         summary: "Quá trình bảo trì đã hoàn tất! Bản cập nhật v1.0 mang đến hàng loạt mod Fabric mới cực xịn cải tiến cơ chế chiến đấu, vũ khí Netherite tối thượng, sinh vật mới, chiến hạm đại dương và tối ưu hiệu năng giảm giật lag tối đa.",
-        image: "https://media.discordapp.net/attachments/1517927699123933325/1527937960903970906/image.png?ex=6a63121d&is=6a61c09d&hm=eac95cc2c595d9b241d789c22bc6f26a82b960fb6900fa161f0e9ee169721577&=&format=webp&quality=lossless",
+        image: "assets/nether_goblin.webp",
         sections: [
             {
                 heading: "🛡️ Bảo Vệ & Phát Triển Dân Làng",
@@ -32,88 +77,21 @@ const CHANGELOGS_DATA = [
                 ]
             }
         ]
-    },
-    {
-        id: "v0.9.0",
-        version: "v0.9",
-        title: "Bản Cập Nhật v0.9 — Tối Ưu Hóa Mạng Async Engine & 20 TPS ⚡",
-        date: "15 Tháng 7, 2026",
-        author: "ThinhDost",
-        authorAvatar: "https://api.dicebear.com/7.x/bottts/svg?seed=ThinhDost",
-        categories: ["performance", "fix"],
-        summary: "Nâng cấp hạ tầng máy chủ lên Folia Multi-threaded Async Engine, khắc phục triệt để tình trạng khựng lag khi có hơn 300 người chơi cùng lúc.",
-        image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1200&auto=format&fit=crop",
-        sections: [
-            {
-                heading: "⚙️ Tối Ưu TPS & Khung Hình",
-                items: [
-                    "<b>Async Chunk Loading:</b> Tải chunk bất đồng bộ giúp người dùng lướt Elytra tốc độ cao không bị lag khựng.",
-                    "<b>Entity Tracking Optimization:</b> Giảm 40% tài nguyên CPU tiêu thụ bởi farm quái quy mô lớn."
-                ]
-            },
-            {
-                heading: "🐛 Sửa Lỗi Tồn Đọng",
-                items: [
-                    "Sửa lỗi rớt vật phẩm khi teleport qua cổng Nether.",
-                    "Khắc phục sự cố hiển thị sai skin khi đổi máy chủ phụ."
-                ]
-            }
-        ]
-    },
-    {
-        id: "v0.8.0",
-        version: "v0.8",
-        title: "Bản Cập Nhật v0.8 — Sự Kiện Đầm Lầy Bí Ẩn & Boss Rồng Mới 🐉",
-        date: "01 Tháng 7, 2026",
-        author: "AdminTeam",
-        authorAvatar: "https://api.dicebear.com/7.x/bottts/svg?seed=AdminTeam",
-        categories: ["event", "feature"],
-        summary: "Khai mở chiều không gian Nether mở rộng cùng hầm ngục Swamp Dungeon hoàn toàn mới với phần thưởng danh vọng vô cùng hấp dẫn.",
-        image: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=1200&auto=format&fit=crop",
-        sections: [
-            {
-                heading: "🏆 Sự Kiện Hầm Ngục",
-                items: [
-                    "<b>Swamp Trial Chambers:</b> Thử thách 10 tầng hầm ngục quái vật với phần thưởng Huy Chương Huyền Thoại.",
-                    "<b>World Boss Void Dragon:</b> Xuất hiện vào 20:00 mỗi cuối tuần tại vùng đất Ender."
-                ]
-            }
-        ]
-    },
-    {
-        id: "v0.7.0",
-        version: "v0.7",
-        title: "Bản Cập Nhật v0.7 — Cân Bằng Kinh Tế & Chợ Giao Dịch Dân Làng ⚖️",
-        date: "18 Tháng 6, 2026",
-        author: "EconomyDev",
-        authorAvatar: "https://api.dicebear.com/7.x/bottts/svg?seed=EconomyDev",
-        categories: ["balance", "fix"],
-        summary: "Điều chỉnh tỷ lệ rớt đồ ngọc lục bảo, làm mới hệ thống thuế giao dịch Marketplace và chống lạm phát nốt vàng.",
-        image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop",
-        sections: [
-            {
-                heading: "⚖️ Cân Bằng Thị Trường",
-                items: [
-                    "<b>Villager Nerf:</b> Giới hạn 3 lần giảm giá sách phù phép từ dân làng để giữ giá trị cho cày cuốc.",
-                    "<b>Auction House V2:</b> Giao diện đấu giá trực tuyến in-game nhanh chóng và bảo mật hơn."
-                ]
-            }
-        ]
     }
 ];
 
 const SNEAKPEEKS_DATA = [
     {
         id: "sp-1",
-        title: "Sneak Peek: Ra Mắt Hàng Loạt Vũ Khí Cận Chiến Độc Quyền Cực Khủng ⚔️",
+        title: "Sneak Peek: Hé Lộ Mod Giáp Hùng Mạnh Sắp Ra Mắt 🛡️",
         date: "25 Tháng 7, 2026",
         type: "image",
-        imageUrl: "https://media.discordapp.net/attachments/1517927699123933325/1529484154222153748/image.png?ex=6a636c1e&is=6a621a9e&hm=42f3c123e8dad9c319469c5be1c7369a2b699136cd574e609572d26cfebe7577&=&format=webp&quality=lossless",
-        summary: `• Chiêm ngưỡng bộ sưu tập vũ khí cận chiến thế hệ mới được chế tạo tinh xảo từ các khoáng sản quý hiếm nhất.
+        imageUrl: "assets/armor.webp",
+        summary: `• Chiêm ngưỡng các bộ giáp hộ mệnh thế hệ mới sắp sửa được ra mắt chính thức trên máy chủ OlongBell.
 
-• Giới thiệu các loại chùy nguyên tố (Elemental Maces) và thương dài độc quyền đi kèm hiệu ứng kỹ năng chiến đấu đẹp mắt.
+• Bản cập nhật sắp tới sẽ mang đến mod giáp độc quyền, được thiết kế tỉ mỉ nhằm tối ưu hóa khả năng phòng thủ và cung cấp ngoại trang siêu ngầu.
 
-• Hệ thống chỉ số và cấp bậc cường hóa vũ khí đa dạng mở khóa sức mạnh chiến đấu tối thượng cho người chơi.`
+• Hãy chuẩn bị sẵn các vật liệu rèn tối thượng để sẵn sàng nâng cấp sức mạnh chiến đấu của bạn trong thời gian tới!`
     },
     {
         id: "sp-3",

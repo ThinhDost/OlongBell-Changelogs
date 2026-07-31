@@ -1,5 +1,5 @@
-const DISCORD_CLIENT_ID = '123456789012345678'; // Developer thay thế Client ID Discord ở đây
-const BACKEND_URL = ''; // Điền link Cloudflare Worker vào đây khi đã cấu hình xong
+window.DISCORD_CLIENT_ID = '1530283736644718834'; // Developer thay thế Client ID Discord ở đây
+window.BACKEND_URL = 'https://olongbell-changelogs-backend.giathinh260307.workers.dev'; // Điền link Cloudflare Worker vào đây khi đã cấu hình xong
 
 class DiscordAuthManager {
     constructor() {
@@ -32,7 +32,7 @@ class DiscordAuthManager {
 
     login() {
         const redirectUri = encodeURIComponent(window.location.origin + window.location.pathname);
-        const url = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=token&scope=identify`;
+        const url = `https://discord.com/api/oauth2/authorize?client_id=${window.DISCORD_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=token&scope=identify`;
         window.location.href = url;
     }
 

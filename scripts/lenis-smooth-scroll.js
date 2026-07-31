@@ -11,6 +11,7 @@ class SmoothScrollAndMarquee {
 
         if (this.marqueeInner && typeof gsap !== 'undefined') {
             this.initMarquee();
+            this.initLazyLoad();
         }
 
         // Lắng nghe sự kiện load để đưa trang về đầu sau khi dựng hình xong
@@ -55,6 +56,45 @@ class SmoothScrollAndMarquee {
                     this.marqueeTween.timeScale(this.currentSpeed);
                 }
             });
+        }
+    }
+
+    initLazyLoad() {
+        // 1. Lazy load cho GSAP Marquee (Dải chữ chính ở trang chủ)
+        const mainMarquee = document.querySelector('.scroll-marquee-container');
+        if (mainMarquee) {
+            const gsapObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        if (this.marqueeTween) this.marqueeTween.play();
+                    } else {
+                        if (this.marqueeTween) this.marqueeTween.pause();
+                    }
+                });
+            }, {
+                root: null,
+                rootMargin: '100px', // Bắt đầu chạy trước khi hiển thị 100px
+                threshold: 0.01
+            });
+            gsapObserver.observe(mainMarquee);
+        }
+
+        // 2. Lazy load cho các dải chữ CSS Keyframes (Dải chữ phân cách changelogs)
+        const cssMarquees = document.querySelectorAll('.bottom-typographic-divider, .section-divider, .infinite-marquee-container');
+        if (cssMarquees.length > 0) {
+            const cssObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const tracks = entry.target.querySelectorAll('.marquee-track, .marquee-line');
+                    tracks.forEach(track => {
+                        track.style.animationPlayState = entry.isIntersecting ? 'running' : 'paused';
+                    });
+                });
+            }, {
+                root: null,
+                rootMargin: '150px',
+                threshold: 0.01
+            });
+            cssMarquees.forEach(el => cssObserver.observe(el));
         }
     }
 }

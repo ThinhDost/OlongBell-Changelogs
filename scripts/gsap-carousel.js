@@ -134,6 +134,9 @@ class GSAP3DCylinderCarousel {
         // Bổ sung Reactions Mock Database trong localStorage
         const getReactions = (logId) => {
             const defaultReactions = { like: 0, love: 0, fire: 0 };
+            if (window.BACKEND_URL && window.globalReactions && window.globalReactions[logId]) {
+                return window.globalReactions[logId];
+            }
             const stored = localStorage.getItem(`reactions_${logId}`);
             return stored ? JSON.parse(stored) : defaultReactions;
         };
