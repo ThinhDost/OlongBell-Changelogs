@@ -1053,6 +1053,7 @@ class UIInteractions {
         });
 
         const currentUserId = window.authManager && window.authManager.user ? window.authManager.user.id : null;
+        const isAdmin = window.authManager && window.authManager.user && window.authManager.user.username === "thinhdost";
 
         let htmlBuffer = '';
         sortedMods.forEach(mod => {
@@ -1081,10 +1082,17 @@ class UIInteractions {
                             <span>Đề xuất bởi <strong>${mod.suggestedBy}</strong></span>
                         </div>
                     </div>
-                    <button class="btn-vote ${hasVoted ? 'has-voted' : ''}" data-mod-id="${mod.id}" title="${hasVoted ? 'Hủy bình chọn' : 'Bình chọn cho mod này'}">
-                        <i class="fa-solid fa-heart vote-icon"></i>
-                        <span class="vote-count">${votesCount}</span>
-                    </button>
+                    <div class="vote-mod-actions">
+                        ${isAdmin ? `
+                            <button class="btn-delete-mod" data-mod-id="${mod.id}" title="Xóa đề xuất này">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        ` : ''}
+                        <button class="btn-vote ${hasVoted ? 'has-voted' : ''}" data-mod-id="${mod.id}" title="${hasVoted ? 'Hủy bình chọn' : 'Bình chọn cho mod này'}">
+                            <i class="fa-solid fa-heart vote-icon"></i>
+                            <span class="vote-count">${votesCount}</span>
+                        </button>
+                    </div>
                 </div>
             `;
         });
@@ -1103,6 +1111,17 @@ class UIInteractions {
                 this.handleModVote(modId);
             });
         });
+
+        // Attach event listeners to delete buttons (for Admin)
+        if (isAdmin) {
+            this.voteModsList.querySelectorAll('.btn-delete-mod').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const modId = btn.dataset.modId;
+                    this.handleModDeletion(modId);
+                });
+            });
+        }
     }
 
     async handleModSubmission() {
@@ -1332,6 +1351,83 @@ class UIInteractions {
             }
         } catch (e) {
             console.warn("Không thể phát âm thanh bình chọn:", e);
+        }
+    }
+
+    async handleModDeletion(modId) {
+        const confirmDelete = confirm('Bạn có chắc chắn muốn xóa đề xuất mod này khỏi danh sách không?');
+        if (!confirmDelete) return;
+
+        // Visual optimistic removal from DOM
+        const card = document.getElementById(`mod-${modId}`);
+        if (card) {
+            card.style.opacity = '0.3';
+            card.style.pointerEvents = 'none';
+        }
+
+        if (window.BACKEND_URL) {
+            const token = localStorage.getItem('discord_token');
+            try {
+                const res = await fetch(`${window.BACKEND_URL}/api/delete-mod`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ modId })
+                });
+
+                if (res.ok) {
+                    const updatedMods = await res.json();
+                    this.renderVoteMods(updatedMods);
+                    this.showToast('Đã xóa đề xuất mod thành công! 🗑️');
+                    this.playDeleteSound();
+                } else {
+                    const data = await res.json();
+                    this.showToast(data.error || 'Lỗi khi xóa đề xuất! ❌');
+                    this.loadModsAndVotes(); // rollback
+                }
+            } catch (err) {
+                console.error('Lỗi mạng khi xóa đề xuất mod:', err);
+                this.showToast('Lỗi kết nối mạng! ❌');
+                this.loadModsAndVotes(); // rollback
+            }
+        } else {
+            // Local offline simulation
+            const stored = localStorage.getItem('vote_mods_offline');
+            let mods = stored ? JSON.parse(stored) : [];
+            mods = mods.filter(m => m.id !== modId);
+            localStorage.setItem('vote_mods_offline', JSON.stringify(mods));
+            this.renderVoteMods(mods);
+            this.showToast('Đã xóa đề xuất mod thành công (Offline)! 🗑️');
+            this.playDeleteSound();
+        }
+    }
+
+    playDeleteSound() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            const now = ctx.currentTime;
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(80, now + 0.2);
+            
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+            
+            osc.start(now);
+            osc.stop(now + 0.25);
+        } catch (e) {
+            console.warn("Không thể phát âm thanh xóa:", e);
         }
     }
 }

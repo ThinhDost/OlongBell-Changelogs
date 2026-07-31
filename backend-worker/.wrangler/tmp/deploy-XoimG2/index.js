@@ -1,10 +1,13 @@
-const CORS_HEADERS = {
+var __defProp = Object.defineProperty;
+var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
+
+// src/index.js
+var CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Max-Age": "86400",
+  "Access-Control-Max-Age": "86400"
 };
-
 async function getDiscordUser(request, env) {
   const authHeader = request.headers.get("Authorization");
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -12,7 +15,6 @@ async function getDiscordUser(request, env) {
   }
   const token = authHeader.split(" ")[1];
   const tokenCacheKey = `token_cache:${token}`;
-  
   let cachedData = await env.OLONGBELL_KV.get(tokenCacheKey);
   let user = null;
   if (cachedData) {
@@ -20,49 +22,36 @@ async function getDiscordUser(request, env) {
       if (cachedData.startsWith("{")) {
         user = JSON.parse(cachedData);
       } else {
-        // Old token cache format containing only userId string
         user = { id: cachedData };
       }
     } catch (e) {
       user = { id: cachedData };
     }
   }
-
-  // If not cached or if it's an old cache format that doesn't have username/avatar,
-  // fetch from Discord to get complete profile details.
   if (!user || !user.username) {
     const discordRes = await fetch("https://discord.com/api/users/@me", {
       headers: { Authorization: `Bearer ${token}` }
     });
-
     if (!discordRes.ok) {
       return null;
     }
-
     const discordUser = await discordRes.json();
     user = {
       id: discordUser.id,
       username: discordUser.username,
-      avatar: discordUser.avatar 
-          ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
-          : `https://cdn.discordapp.com/embed/avatars/${parseInt(discordUser.id) % 5}.png`
+      avatar: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` : `https://cdn.discordapp.com/embed/avatars/${parseInt(discordUser.id) % 5}.png`
     };
-
     await env.OLONGBELL_KV.put(tokenCacheKey, JSON.stringify(user), { expirationTtl: 600 });
   }
   return user;
 }
-
-export default {
+__name(getDiscordUser, "getDiscordUser");
+var index_default = {
   async fetch(request, env) {
     const url = new URL(request.url);
-
-    // Xử lý CORS Preflight Request
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });
     }
-
-    // 1. API GET /api/reactions - Lấy số lượng thả tim toàn cục
     if (request.method === "GET" && url.pathname === "/api/reactions") {
       try {
         let reactions = await env.OLONGBELL_KV.get("reactions:global", "json");
@@ -82,8 +71,6 @@ export default {
         });
       }
     }
-
-    // 2. API POST /api/react - Thả/Hủy thả tim (yêu cầu Discord token)
     if (request.method === "POST" && url.pathname === "/api/react") {
       try {
         const user = await getDiscordUser(request, env);
@@ -94,21 +81,16 @@ export default {
           });
         }
         const userId = user.id;
-
-        // 2. Kiểm tra Rate Limit chống spam (giới hạn tối thiểu 1 giây giữa mỗi lượt tương tác của 1 user)
         const lastReactKey = `last_react:${userId}`;
         const lastReactTime = await env.OLONGBELL_KV.get(lastReactKey);
         const now = Date.now();
-        if (lastReactTime && (now - parseInt(lastReactTime)) < 1000) {
-          return new Response(JSON.stringify({ error: "Too Many Requests: Vui lòng đợi 1 giây giữa các lượt thả tim!" }), {
+        if (lastReactTime && now - parseInt(lastReactTime) < 1e3) {
+          return new Response(JSON.stringify({ error: "Too Many Requests: Vui l\xF2ng \u0111\u1EE3i 1 gi\xE2y gi\u1EEFa c\xE1c l\u01B0\u1EE3t th\u1EA3 tim!" }), {
             status: 429,
             headers: { "Content-Type": "application/json", ...CORS_HEADERS }
           });
         }
-        // Ghi nhận thời điểm tương tác mới
         await env.OLONGBELL_KV.put(lastReactKey, now.toString());
-
-        // Đọc dữ liệu gửi lên từ body
         const { logId, type } = await request.json();
         if (!logId || !["like", "love", "fire"].includes(type)) {
           return new Response(JSON.stringify({ error: "Bad Request: Invalid logId or type" }), {
@@ -116,12 +98,8 @@ export default {
             headers: { "Content-Type": "application/json", ...CORS_HEADERS }
           });
         }
-
-        // Tạo key lưu reaction cá nhân: user_react:<userId>:<logId>
         const userReactKey = `user_react:${userId}:${logId}`;
         const previousType = await env.OLONGBELL_KV.get(userReactKey);
-
-        // Lấy danh sách reactions toàn cục hiện tại
         let globalReactions = await env.OLONGBELL_KV.get("reactions:global", "json");
         if (!globalReactions) {
           globalReactions = {};
@@ -129,40 +107,29 @@ export default {
         if (!globalReactions[logId]) {
           globalReactions[logId] = { like: 0, love: 0, fire: 0 };
         }
-
         let userReaction = null;
-
         if (previousType === type) {
-          // Bấm trùng loại -> Hủy thả tim (Toggle off)
           await env.OLONGBELL_KV.delete(userReactKey);
           globalReactions[logId][type] = Math.max(0, (globalReactions[logId][type] || 0) - 1);
           userReaction = null;
         } else {
-          // Đổi loại tim hoặc lần đầu thả tim
           if (previousType) {
-            // Giảm số lượng của loại tim cũ
             globalReactions[logId][previousType] = Math.max(0, (globalReactions[logId][previousType] || 0) - 1);
           }
-          // Tăng số lượng của loại tim mới
           globalReactions[logId][type] = (globalReactions[logId][type] || 0) + 1;
-          
           await env.OLONGBELL_KV.put(userReactKey, type);
           userReaction = type;
         }
-
-        // Lưu danh sách reaction toàn cục mới vào KV
         await env.OLONGBELL_KV.put("reactions:global", JSON.stringify(globalReactions));
-
         return new Response(JSON.stringify({
           allReactions: globalReactions,
-          userReaction: userReaction
+          userReaction
         }), {
           headers: {
             "Content-Type": "application/json",
             ...CORS_HEADERS
           }
         });
-
       } catch (err) {
         return new Response(JSON.stringify({ error: err.message }), {
           status: 500,
@@ -170,8 +137,6 @@ export default {
         });
       }
     }
-
-    // 3. API GET /api/votes - Lấy danh sách mod đề xuất và lượt vote
     if (request.method === "GET" && url.pathname === "/api/votes") {
       try {
         let mods = await env.OLONGBELL_KV.get("vote:mods", "json");
@@ -191,8 +156,6 @@ export default {
         });
       }
     }
-
-    // 4. API POST /api/submit-mod - Đề xuất mod mới
     if (request.method === "POST" && url.pathname === "/api/submit-mod") {
       try {
         const user = await getDiscordUser(request, env);
@@ -202,64 +165,53 @@ export default {
             headers: { "Content-Type": "application/json", ...CORS_HEADERS }
           });
         }
-
-        // Kiểm tra Rate Limit chống spam (giới hạn tối thiểu 3 giây giữa mỗi lượt đề xuất mod)
         const lastSubmitKey = `last_submit_mod:${user.id}`;
         const lastSubmitTime = await env.OLONGBELL_KV.get(lastSubmitKey);
         const now = Date.now();
-        if (lastSubmitTime && (now - parseInt(lastSubmitTime)) < 3000) {
-          return new Response(JSON.stringify({ error: "Too Many Requests: Vui lòng đợi 3 giây giữa các lượt đề xuất!" }), {
+        if (lastSubmitTime && now - parseInt(lastSubmitTime) < 3e3) {
+          return new Response(JSON.stringify({ error: "Too Many Requests: Vui l\xF2ng \u0111\u1EE3i 3 gi\xE2y gi\u1EEFa c\xE1c l\u01B0\u1EE3t \u0111\u1EC1 xu\u1EA5t!" }), {
             status: 429,
             headers: { "Content-Type": "application/json", ...CORS_HEADERS }
           });
         }
         await env.OLONGBELL_KV.put(lastSubmitKey, now.toString());
-
         let { name, url: modUrl } = await request.json();
         if (!name || !modUrl) {
-          return new Response(JSON.stringify({ error: "Bad Request: Thiếu tên mod hoặc link đề xuất!" }), {
+          return new Response(JSON.stringify({ error: "Bad Request: Thi\u1EBFu t\xEAn mod ho\u1EB7c link \u0111\u1EC1 xu\u1EA5t!" }), {
             status: 400,
             headers: { "Content-Type": "application/json", ...CORS_HEADERS }
           });
         }
-
         name = name.trim();
         modUrl = modUrl.trim();
-
         if (name.length < 2 || name.length > 60) {
-          return new Response(JSON.stringify({ error: "Tên mod phải từ 2 đến 60 ký tự!" }), {
+          return new Response(JSON.stringify({ error: "T\xEAn mod ph\u1EA3i t\u1EEB 2 \u0111\u1EBFn 60 k\xFD t\u1EF1!" }), {
             status: 400,
             headers: { "Content-Type": "application/json", ...CORS_HEADERS }
           });
         }
-
-        // Kiểm tra định dạng link CurseForge hoặc Modrinth
         let isValidUrl = false;
         try {
           const parsed = new URL(modUrl);
-          const hostname = parsed.hostname.replace('www.', '');
-          if (hostname === 'curseforge.com') {
-            isValidUrl = parsed.pathname.includes('/mc-mods/');
-          } else if (hostname === 'modrinth.com') {
-            isValidUrl = parsed.pathname.includes('/mod/') || parsed.pathname.includes('/project/');
+          const hostname = parsed.hostname.replace("www.", "");
+          if (hostname === "curseforge.com") {
+            isValidUrl = parsed.pathname.includes("/mc-mods/");
+          } else if (hostname === "modrinth.com") {
+            isValidUrl = parsed.pathname.includes("/mod/") || parsed.pathname.includes("/project/");
           }
-        } catch (e) {}
-
+        } catch (e) {
+        }
         if (!isValidUrl) {
-          return new Response(JSON.stringify({ error: "Đường dẫn không hợp lệ! Chỉ chấp nhận link từ curseforge.com hoặc modrinth.com." }), {
+          return new Response(JSON.stringify({ error: "\u0110\u01B0\u1EDDng d\u1EABn kh\xF4ng h\u1EE3p l\u1EC7! Ch\u1EC9 ch\u1EA5p nh\u1EADn link t\u1EEB curseforge.com ho\u1EB7c modrinth.com." }), {
             status: 400,
             headers: { "Content-Type": "application/json", ...CORS_HEADERS }
           });
         }
-
-        // Lấy danh sách mod đề xuất hiện tại
         let mods = await env.OLONGBELL_KV.get("vote:mods", "json");
         if (!mods) {
           mods = [];
         }
-
-        // Kiểm tra xem URL đã được đề xuất chưa
-        const isDuplicate = mods.some(m => {
+        const isDuplicate = mods.some((m) => {
           try {
             const u1 = new URL(m.url);
             const u2 = new URL(modUrl);
@@ -268,34 +220,29 @@ export default {
             return m.url === modUrl;
           }
         });
-
         if (isDuplicate) {
-          return new Response(JSON.stringify({ error: "Mod này đã được đề xuất trước đó!" }), {
+          return new Response(JSON.stringify({ error: "Mod n\xE0y \u0111\xE3 \u0111\u01B0\u1EE3c \u0111\u1EC1 xu\u1EA5t tr\u01B0\u1EDBc \u0111\xF3!" }), {
             status: 400,
             headers: { "Content-Type": "application/json", ...CORS_HEADERS }
           });
         }
-
-        // Tạo mod mới
         const newMod = {
           id: crypto.randomUUID(),
           name,
           url: modUrl,
           suggestedBy: user.username,
           avatar: user.avatar,
-          voters: [user.id] // Tự động vote cho mod mình đề xuất
+          voters: [user.id]
+          // Tự động vote cho mod mình đề xuất
         };
-
         mods.push(newMod);
         await env.OLONGBELL_KV.put("vote:mods", JSON.stringify(mods));
-
         return new Response(JSON.stringify(mods), {
           headers: {
             "Content-Type": "application/json",
             ...CORS_HEADERS
           }
         });
-
       } catch (err) {
         return new Response(JSON.stringify({ error: err.message }), {
           status: 500,
@@ -303,8 +250,6 @@ export default {
         });
       }
     }
-
-    // 5. API POST /api/vote-mod - Bình chọn cho mod
     if (request.method === "POST" && url.pathname === "/api/vote-mod") {
       try {
         const user = await getDiscordUser(request, env);
@@ -314,51 +259,41 @@ export default {
             headers: { "Content-Type": "application/json", ...CORS_HEADERS }
           });
         }
-
         const { modId } = await request.json();
         if (!modId) {
-          return new Response(JSON.stringify({ error: "Bad Request: Thiếu ID mod!" }), {
+          return new Response(JSON.stringify({ error: "Bad Request: Thi\u1EBFu ID mod!" }), {
             status: 400,
             headers: { "Content-Type": "application/json", ...CORS_HEADERS }
           });
         }
-
-        // Lấy danh sách mod
         let mods = await env.OLONGBELL_KV.get("vote:mods", "json");
         if (!mods) {
           mods = [];
         }
-
-        const modIndex = mods.findIndex(m => m.id === modId);
+        const modIndex = mods.findIndex((m) => m.id === modId);
         if (modIndex === -1) {
-          return new Response(JSON.stringify({ error: "Mod không tồn tại!" }), {
+          return new Response(JSON.stringify({ error: "Mod kh\xF4ng t\u1ED3n t\u1EA1i!" }), {
             status: 404,
             headers: { "Content-Type": "application/json", ...CORS_HEADERS }
           });
         }
-
-        // Toggle vote
         const mod = mods[modIndex];
         if (!mod.voters) {
           mod.voters = [];
         }
-
         const voterIndex = mod.voters.indexOf(user.id);
         if (voterIndex === -1) {
           mod.voters.push(user.id);
         } else {
           mod.voters.splice(voterIndex, 1);
         }
-
         await env.OLONGBELL_KV.put("vote:mods", JSON.stringify(mods));
-
         return new Response(JSON.stringify(mods), {
           headers: {
             "Content-Type": "application/json",
             ...CORS_HEADERS
           }
         });
-
       } catch (err) {
         return new Response(JSON.stringify({ error: err.message }), {
           status: 500,
@@ -366,8 +301,6 @@ export default {
         });
       }
     }
-
-    // 6. API POST /api/delete-mod - Xóa đề xuất mod (chỉ Admin 'thinhdost')
     if (request.method === "POST" && url.pathname === "/api/delete-mod") {
       try {
         const user = await getDiscordUser(request, env);
@@ -377,48 +310,38 @@ export default {
             headers: { "Content-Type": "application/json", ...CORS_HEADERS }
           });
         }
-
-        // Kiểm tra quyền Admin (username phải là 'thinhdost')
         if (user.username !== "thinhdost") {
-          return new Response(JSON.stringify({ error: "Forbidden: Bạn không có quyền quản trị để xóa đề xuất!" }), {
+          return new Response(JSON.stringify({ error: "Forbidden: B\u1EA1n kh\xF4ng c\xF3 quy\u1EC1n qu\u1EA3n tr\u1ECB \u0111\u1EC3 x\xF3a \u0111\u1EC1 xu\u1EA5t!" }), {
             status: 403,
             headers: { "Content-Type": "application/json", ...CORS_HEADERS }
           });
         }
-
         const { modId } = await request.json();
         if (!modId) {
-          return new Response(JSON.stringify({ error: "Bad Request: Thiếu ID mod!" }), {
+          return new Response(JSON.stringify({ error: "Bad Request: Thi\u1EBFu ID mod!" }), {
             status: 400,
             headers: { "Content-Type": "application/json", ...CORS_HEADERS }
           });
         }
-
-        // Lấy danh sách mod
         let mods = await env.OLONGBELL_KV.get("vote:mods", "json");
         if (!mods) {
           mods = [];
         }
-
-        const modIndex = mods.findIndex(m => m.id === modId);
+        const modIndex = mods.findIndex((m) => m.id === modId);
         if (modIndex === -1) {
-          return new Response(JSON.stringify({ error: "Mod không tồn tại!" }), {
+          return new Response(JSON.stringify({ error: "Mod kh\xF4ng t\u1ED3n t\u1EA1i!" }), {
             status: 404,
             headers: { "Content-Type": "application/json", ...CORS_HEADERS }
           });
         }
-
-        // Xóa mod khỏi mảng
         mods.splice(modIndex, 1);
         await env.OLONGBELL_KV.put("vote:mods", JSON.stringify(mods));
-
         return new Response(JSON.stringify(mods), {
           headers: {
             "Content-Type": "application/json",
             ...CORS_HEADERS
           }
         });
-
       } catch (err) {
         return new Response(JSON.stringify({ error: err.message }), {
           status: 500,
@@ -426,10 +349,13 @@ export default {
         });
       }
     }
-
     return new Response(JSON.stringify({ error: "Not Found" }), {
       status: 404,
       headers: { "Content-Type": "application/json", ...CORS_HEADERS }
     });
   }
 };
+export {
+  index_default as default
+};
+//# sourceMappingURL=index.js.map
