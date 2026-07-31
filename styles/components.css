@@ -1863,6 +1863,37 @@
     gap: 10px;
 }
 
+/* Confirm Modal Custom Styling */
+@keyframes pulseGlowRose {
+    0% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 5px rgba(229, 107, 111, 0.2));
+    }
+    100% {
+        transform: scale(1.08);
+        filter: drop-shadow(0 0 15px rgba(229, 107, 111, 0.5));
+    }
+}
+
+.confirm-modal-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md), 0 0 40px rgba(229, 107, 111, 0.05);
+}
+
+#confirm-cancel-btn:hover {
+    border-color: var(--text-muted) !important;
+    color: var(--text-primary) !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+}
+
+#confirm-agree-btn:hover {
+    background: #f07b80 !important;
+    box-shadow: 0 0 15px rgba(229, 107, 111, 0.3) !important;
+    transform: translateY(-1px) !important;
+}
+
 /* Mobile responsive adjustments for Vote Section */
 @media (max-width: 768px) {
     .vote-section {

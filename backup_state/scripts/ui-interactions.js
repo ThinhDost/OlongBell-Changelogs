@@ -1355,53 +1355,115 @@ class UIInteractions {
     }
 
     async handleModDeletion(modId) {
-        const confirmDelete = confirm('Bạn có chắc chắn muốn xóa đề xuất mod này khỏi danh sách không?');
-        if (!confirmDelete) return;
+        this.showConfirmModal('Bạn có chắc chắn muốn xóa đề xuất mod này khỏi danh sách bình chọn không?', async () => {
+            // Visual optimistic removal from DOM
+            const card = document.getElementById(`mod-${modId}`);
+            if (card) {
+                card.style.opacity = '0.3';
+                card.style.pointerEvents = 'none';
+            }
 
-        // Visual optimistic removal from DOM
-        const card = document.getElementById(`mod-${modId}`);
-        if (card) {
-            card.style.opacity = '0.3';
-            card.style.pointerEvents = 'none';
-        }
+            if (window.BACKEND_URL) {
+                const token = localStorage.getItem('discord_token');
+                try {
+                    const res = await fetch(`${window.BACKEND_URL}/api/delete-mod`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ modId })
+                    });
 
-        if (window.BACKEND_URL) {
-            const token = localStorage.getItem('discord_token');
-            try {
-                const res = await fetch(`${window.BACKEND_URL}/api/delete-mod`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ modId })
-                });
-
-                if (res.ok) {
-                    const updatedMods = await res.json();
-                    this.renderVoteMods(updatedMods);
-                    this.showToast('Đã xóa đề xuất mod thành công! 🗑️');
-                    this.playDeleteSound();
-                } else {
-                    const data = await res.json();
-                    this.showToast(data.error || 'Lỗi khi xóa đề xuất! ❌');
+                    if (res.ok) {
+                        const updatedMods = await res.json();
+                        this.renderVoteMods(updatedMods);
+                        this.showToast('Đã xóa đề xuất mod thành công! 🗑️');
+                        this.playDeleteSound();
+                    } else {
+                        const data = await res.json();
+                        this.showToast(data.error || 'Lỗi khi xóa đề xuất! ❌');
+                        this.loadModsAndVotes(); // rollback
+                    }
+                } catch (err) {
+                    console.error('Lỗi mạng khi xóa đề xuất mod:', err);
+                    this.showToast('Lỗi kết nối mạng! ❌');
                     this.loadModsAndVotes(); // rollback
                 }
-            } catch (err) {
-                console.error('Lỗi mạng khi xóa đề xuất mod:', err);
-                this.showToast('Lỗi kết nối mạng! ❌');
-                this.loadModsAndVotes(); // rollback
+            } else {
+                // Local offline simulation
+                const stored = localStorage.getItem('vote_mods_offline');
+                let mods = stored ? JSON.parse(stored) : [];
+                mods = mods.filter(m => m.id !== modId);
+                localStorage.setItem('vote_mods_offline', JSON.stringify(mods));
+                this.renderVoteMods(mods);
+                this.showToast('Đã xóa đề xuất mod thành công (Offline)! 🗑️');
+                this.playDeleteSound();
             }
-        } else {
-            // Local offline simulation
-            const stored = localStorage.getItem('vote_mods_offline');
-            let mods = stored ? JSON.parse(stored) : [];
-            mods = mods.filter(m => m.id !== modId);
-            localStorage.setItem('vote_mods_offline', JSON.stringify(mods));
-            this.renderVoteMods(mods);
-            this.showToast('Đã xóa đề xuất mod thành công (Offline)! 🗑️');
-            this.playDeleteSound();
+        });
+    }
+
+    showConfirmModal(message, onConfirm) {
+        let modal = document.getElementById('confirm-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'confirm-modal';
+            modal.className = 'modal-overlay confirm-modal-overlay hidden';
+            modal.innerHTML = `
+                <div class="modal-card confirm-modal-card" style="max-width: 420px;">
+                    <div class="modal-content confirm-modal-content" style="text-align: center; padding: 20px 10px;">
+                        <div class="confirm-icon-wrapper" style="font-size: 3rem; color: var(--accent-warm-rose); margin-bottom: 20px; animation: pulseGlowRose 2s infinite alternate; display: inline-block;">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <h3 class="confirm-title" style="font-family: var(--font-heading); font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">Xác nhận hành động</h3>
+                        <p class="confirm-message" id="confirm-modal-msg" style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5; margin-bottom: 28px;"></p>
+                        <div class="confirm-actions" style="display: flex; align-items: center; justify-content: center; gap: 16px;">
+                            <button id="confirm-cancel-btn" class="view-btn" style="padding: 10px 24px; font-size: 0.9rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer; transition: all var(--transition-fast);">Hủy</button>
+                            <button id="confirm-agree-btn" class="btn-primary-action" style="padding: 10px 24px; font-size: 0.9rem; border-radius: var(--radius-sm); background: var(--accent-warm-rose); border: 1px solid rgba(229, 107, 111, 0.2); color: #ffffff; cursor: pointer; transition: all var(--transition-fast);">Đồng ý</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Close actions
+            const cancelBtn = modal.querySelector('#confirm-cancel-btn');
+            cancelBtn.addEventListener('click', () => this.closeConfirmModal());
+
+            // Click outside
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) this.closeConfirmModal();
+            });
         }
+
+        // Set dynamic message
+        const msgEl = modal.querySelector('#confirm-modal-msg');
+        if (msgEl) msgEl.textContent = message;
+
+        // Set action click
+        const agreeBtn = modal.querySelector('#confirm-agree-btn');
+        const newAgreeBtn = agreeBtn.cloneNode(true);
+        agreeBtn.parentNode.replaceChild(newAgreeBtn, agreeBtn);
+        newAgreeBtn.addEventListener('click', () => {
+            this.closeConfirmModal();
+            if (typeof onConfirm === 'function') onConfirm();
+        });
+
+        // Show modal with animation
+        modal.classList.remove('hidden');
+        void modal.offsetWidth;
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    closeConfirmModal() {
+        const modal = document.getElementById('confirm-modal');
+        if (!modal) return;
+        modal.classList.remove('active');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }, 320);
     }
 
     playDeleteSound() {
