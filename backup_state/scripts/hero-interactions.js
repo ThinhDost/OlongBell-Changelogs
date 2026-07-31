@@ -39,11 +39,29 @@ class HeroInteractions {
                     ease: 'power2.out',
                     onComplete: () => {
                         introScreen.style.display = 'none';
-                        // Đảm bảo cuộn về đầu trang sau khi ẩn màn hình loading
-                        window.scrollTo(0, 0);
+                        
                         if (typeof ScrollTrigger !== 'undefined') {
                             ScrollTrigger.refresh();
                         }
+
+                        // Kiểm tra nếu URL có chứa hash (ví dụ #vote-section)
+                        const hash = window.location.hash;
+                        if (hash) {
+                            try {
+                                const target = document.querySelector(hash);
+                                if (target) {
+                                    // Tự động cuộn mượt mà đến section
+                                    target.scrollIntoView({ behavior: 'smooth' });
+                                } else {
+                                    window.scrollTo(0, 0);
+                                }
+                            } catch (e) {
+                                window.scrollTo(0, 0);
+                            }
+                        } else {
+                            window.scrollTo(0, 0);
+                        }
+
                         // Intro biến mất -> Đánh thức trang chính
                         this.playEntranceAnimations();
                         // Phát giọng nói chào mừng & hiện phụ đề anime
