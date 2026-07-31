@@ -3148,3 +3148,51 @@
     opacity: 0;
 }
 
+/* Mod Installation Section Responsive styling */
+@media (max-width: 768px) {
+    .mod-install-section {
+        padding: 40px 24px;
+        margin-top: 60px;
+    }
+    .install-title {
+        font-size: 1.8rem;
+    }
+    .install-description {
+        font-size: 0.95rem;
+    }
+    .terminal-body {
+        padding: 24px 16px;
+    }
+    .code-line {
+        font-size: 0.85rem;
+    }
+    .prompt {
+        display: block;
+        margin-bottom: 4px;
+    }
+}
+
+@media (max-width: 480px) {
+    .mod-install-section {
+        padding: 30px 16px;
+        margin-top: 50px;
+        border-radius: var(--radius-md);
+    }
+    .install-title {
+        font-size: 1.5rem;
+    }
+    .install-steps li {
+        font-size: 0.88rem;
+        gap: 12px;
+    }
+    .step-num {
+        width: 24px;
+        height: 24px;
+        font-size: 0.75rem;
+    }
+    .install-note {
+        padding: 12px;
+        font-size: 0.82rem;
+    }
+}
+
