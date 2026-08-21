@@ -7,12 +7,16 @@ class AmbientCursorEffect {
         // Mouse Coordinates & Lerp Physics
         this.mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
         this.target = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-        this.lerpAmount = 0.12; // Physics smoothness factor
+        this.lerpAmount = 0.08; // Physics smoothness factor
 
         // Particles Setting (Constellation)
         this.particles = [];
         this.connectionDistance = 120; // Khoảng cách nối dây giữa các vì sao
         this.mouseConnectionDistance = 180; // Khoảng cách nối dây tới con trỏ chuột
+        
+        // Cache for card spotlight performance
+        this.activeCard = null;
+        this.activeCardRect = null;
         
         this.init();
     }
@@ -23,13 +27,38 @@ class AmbientCursorEffect {
         this.resizeCanvas();
         window.addEventListener('resize', () => this.resizeCanvas());
 
-        // Mouse Listeners
+        // Mouse global coordinates updates
         window.addEventListener('mousemove', (e) => {
             this.target.x = e.clientX;
             this.target.y = e.clientY;
-            
-            // Update Card Spotlight Position for hovered elements
-            this.updateCardSpotlight(e);
+        });
+
+        // Event delegation for caching card bounds
+        document.addEventListener('mouseover', (e) => {
+            const card = e.target.closest('.changelog-card');
+            if (card) {
+                if (this.activeCard !== card) {
+                    this.activeCard = card;
+                    this.activeCardRect = card.getBoundingClientRect();
+                }
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (this.activeCard && this.activeCardRect) {
+                const x = e.clientX - this.activeCardRect.left;
+                const y = e.clientY - this.activeCardRect.top;
+                this.activeCard.style.setProperty('--mouse-x', `${x}px`);
+                this.activeCard.style.setProperty('--mouse-y', `${y}px`);
+            }
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            const card = e.target.closest('.changelog-card');
+            if (card && (!e.relatedTarget || !card.contains(e.relatedTarget))) {
+                this.activeCard = null;
+                this.activeCardRect = null;
+            }
         });
 
         // Touch support for mobile devices
@@ -38,7 +67,7 @@ class AmbientCursorEffect {
                 this.target.x = e.touches[0].clientX;
                 this.target.y = e.touches[0].clientY;
             }
-        });
+        }, { passive: true });
 
         // Start 60fps Animation Loop
         this.render();
@@ -68,24 +97,14 @@ class AmbientCursorEffect {
         }
     }
 
-    updateCardSpotlight(e) {
-        const cards = document.querySelectorAll('.changelog-card');
-        cards.forEach(card => {
-            const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            card.style.setProperty('--mouse-x', `${x}px`);
-            card.style.setProperty('--mouse-y', `${y}px`);
-        });
-    }
-
     render() {
         // Linear Interpolation (LERP) for liquid smooth cursor movement
         this.mouse.x += (this.target.x - this.mouse.x) * this.lerpAmount;
         this.mouse.y += (this.target.y - this.mouse.y) * this.lerpAmount;
 
         if (this.cursorDot) {
-            this.cursorDot.style.transform = `translate3d(${this.target.x}px, ${this.target.y}px, 0)`;
+            // Use LERP coordinates for physics-based smoothed following
+            this.cursorDot.style.transform = `translate3d(${this.mouse.x}px, ${this.mouse.y}px, 0)`;
         }
 
         // Clear Canvas for next frame
@@ -95,6 +114,9 @@ class AmbientCursorEffect {
         const colorCyan = isDark ? '142, 212, 232' : '107, 205, 232';
         const colorGold = isDark ? '214, 172, 104' : '201, 154, 76';
         const baseLineColor = isDark ? '255, 255, 255' : '140, 132, 117';
+
+        const mouseLimitSq = this.mouseConnectionDistance * this.mouseConnectionDistance;
+        const connectionLimitSq = this.connectionDistance * this.connectionDistance;
 
         // Update & Draw Particles
         for (let i = 0; i < this.particles.length; i++) {
@@ -111,9 +133,9 @@ class AmbientCursorEffect {
             // Tương tác vật lý kéo dạt khi trỏ chuột đến quá gần (Lực đẩy nhẹ)
             let dxMouse = this.mouse.x - p.x;
             let dyMouse = this.mouse.y - p.y;
-            let distMouse = Math.sqrt(dxMouse * dxMouse + dyMouse * dyMouse);
+            let distMouseSq = dxMouse * dxMouse + dyMouse * dyMouse;
             
-            if (distMouse < 80) {
+            if (distMouseSq < 6400) { // 80 * 80
                 p.x -= dxMouse * 0.02;
                 p.y -= dyMouse * 0.02;
             }
@@ -125,7 +147,8 @@ class AmbientCursorEffect {
             this.ctx.fill();
 
             // Nối dây tới trỏ chuột
-            if (distMouse < this.mouseConnectionDistance) {
+            if (distMouseSq < mouseLimitSq) {
+                let distMouse = Math.sqrt(distMouseSq);
                 this.ctx.beginPath();
                 this.ctx.moveTo(p.x, p.y);
                 this.ctx.lineTo(this.mouse.x, this.mouse.y);
@@ -135,14 +158,15 @@ class AmbientCursorEffect {
                 this.ctx.stroke();
             }
 
-            // Nối dây giữa các hạt với nhau
+            // Nối dây giữa các hạt với nhau (Bình phương kiểm tra trước để tránh Math.sqrt không cần thiết)
             for (let j = i + 1; j < this.particles.length; j++) {
                 let p2 = this.particles[j];
                 let dx = p.x - p2.x;
                 let dy = p.y - p2.y;
-                let dist = Math.sqrt(dx * dx + dy * dy);
+                let distSq = dx * dx + dy * dy;
 
-                if (dist < this.connectionDistance) {
+                if (distSq < connectionLimitSq) {
+                    let dist = Math.sqrt(distSq);
                     this.ctx.beginPath();
                     this.ctx.moveTo(p.x, p.y);
                     this.ctx.lineTo(p2.x, p2.y);

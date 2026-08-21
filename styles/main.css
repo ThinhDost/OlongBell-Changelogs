@@ -238,9 +238,27 @@ h1, h2, h3, h4, h5, h6 {
     width: 8px;
     height: 8px;
     border-radius: 50%;
+    background-color: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+    transition: all var(--transition-normal);
+}
+
+.ip-status-dot.online {
     background-color: var(--accent-green);
     box-shadow: 0 0 10px var(--accent-green);
     animation: pulse 2s infinite;
+}
+
+.ip-status-dot.offline {
+    background-color: #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+    animation: none;
+}
+
+.ip-status-dot.loading {
+    background-color: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+    animation: pulse 1s infinite;
 }
 
 .ip-details {

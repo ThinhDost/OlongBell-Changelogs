@@ -78,7 +78,8 @@ class HeroInteractions {
             '.title-brand',
             '.title-sub-text',
             '.hero-tagline',
-            '.hero-btn-group'
+            '.hero-btn-group',
+            '.hero-mc-radar'
         ];
 
         // Ẩn ban đầu để chống giật chớp (FOUC)
@@ -92,7 +93,8 @@ class HeroInteractions {
             '.title-brand',
             '.title-sub-text',
             '.hero-tagline',
-            '.hero-btn-group'
+            '.hero-btn-group',
+            '.hero-mc-radar'
         ];
 
         // Animation xuất hiện mượt mà (Stagger)
@@ -154,8 +156,14 @@ class HeroInteractions {
     initMagneticButton() {
         if (!this.ctaBtn) return;
         
+        let rect = null;
+
+        this.ctaBtn.addEventListener('mouseenter', () => {
+            rect = this.ctaBtn.getBoundingClientRect();
+        });
+        
         this.ctaBtn.addEventListener('mousemove', (e) => {
-            const rect = this.ctaBtn.getBoundingClientRect();
+            if (!rect) rect = this.ctaBtn.getBoundingClientRect();
             // Tính toán vị trí chuột so với tâm của nút
             const x = e.clientX - rect.left - rect.width / 2;
             const y = e.clientY - rect.top - rect.height / 2;
@@ -172,6 +180,7 @@ class HeroInteractions {
         });
 
         this.ctaBtn.addEventListener('mouseleave', () => {
+            rect = null;
             // Phục hồi lại Transition CSS
             this.ctaBtn.style.transition = 'all var(--transition-normal)';
             

@@ -36,6 +36,8 @@ html {
     --accent-warm-rose: #e56b6f;
     --accent-cyan: #6bcde8;
     --accent-cyan-light: rgba(107, 205, 232, 0.15);
+    --cyan-primary: var(--accent-cyan);
+    --gold-primary: var(--primary);
 
     --spotlight-color: rgba(201, 154, 76, 0.08);
     --dot-color: rgba(140, 132, 117, 0.16);
@@ -72,6 +74,8 @@ html {
     
     --accent-cyan: #8ed4e8;
     --accent-cyan-light: rgba(142, 212, 232, 0.12);
+    --cyan-primary: var(--accent-cyan);
+    --gold-primary: var(--primary);
 
     --spotlight-color: rgba(214, 172, 104, 0.12);
     --dot-color: rgba(255, 255, 255, 0.06);
@@ -234,9 +238,27 @@ h1, h2, h3, h4, h5, h6 {
     width: 8px;
     height: 8px;
     border-radius: 50%;
+    background-color: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+    transition: all var(--transition-normal);
+}
+
+.ip-status-dot.online {
     background-color: var(--accent-green);
     box-shadow: 0 0 10px var(--accent-green);
     animation: pulse 2s infinite;
+}
+
+.ip-status-dot.offline {
+    background-color: #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+    animation: none;
+}
+
+.ip-status-dot.loading {
+    background-color: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+    animation: pulse 1s infinite;
 }
 
 .ip-details {

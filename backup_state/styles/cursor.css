@@ -44,7 +44,7 @@ a:hover, button:hover, .filter-chip:hover, .server-ip-box:hover, .changelog-card
     pointer-events: none;
     z-index: 9999;
     opacity: 0;
-    transition: opacity 0.3s ease, transform 0.1s ease-out;
+    transition: opacity 0.3s ease;
     will-change: transform;
 }
 

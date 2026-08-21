@@ -65,16 +65,21 @@
 
             <div class="nav-actions">
                 <!-- Server IP Widget with Copy Button -->
-                <div class="server-ip-box" id="copy-ip-btn" title="Click to copy server IP">
-                    <div class="ip-status-dot"></div>
+                <div class="server-ip-box" id="copy-ip-btn" title="Click để sao chép IP máy chủ">
+                    <div class="ip-status-dot" id="nav-status-dot"></div>
                     <div class="ip-details">
                         <span class="ip-label">SERVER IP</span>
-                        <span class="ip-address">onglongbel.raumasmp.online</span>
+                        <span class="ip-address">olongbel.raumasmp.online</span>
                     </div>
                     <button class="copy-icon-btn" aria-label="Copy Server IP">
                         <i class="fa-regular fa-copy"></i>
                     </button>
                 </div>
+                
+                <!-- Donate Button -->
+                <button id="donate-btn" class="donate-btn" title="Đô nết cho sivi nèe <3">
+                    <i class="fa-solid fa-heart"></i> <span>Đô nết cho sivi nèe &lt;3</span>
+                </button>
 
                 <!-- Discord Authentication Panel -->
                 <div class="discord-auth-container" id="discord-auth-container">
@@ -107,9 +112,9 @@
         <div class="hero-screen-container">
             <!-- Left Column: Title & Server Info -->
             <div class="hero-left-content">
-                <div class="hero-live-badge">
-                    <span class="live-pulse"></span>
-                    <span id="player-count">342</span> Players Online
+                <div class="hero-live-badge" id="hero-live-badge">
+                    <span class="live-pulse" id="hero-live-dot"></span>
+                    <span id="hero-live-text"><strong id="player-count">--</strong> / <span id="player-max">--</span> Online</span>
                 </div>
 
                 <h1 class="hero-main-heading">
@@ -125,9 +130,48 @@
                     <a href="#changelogs-section" class="btn-primary-action">
                         <i class="fa-solid fa-layer-group"></i> Explore Updates
                     </a>
-                    <div class="hero-server-ip-pill">
+                    <div class="hero-server-ip-pill" id="hero-copy-ip-pill" title="Click để sao chép IP">
                         <i class="fa-solid fa-server"></i>
-                        <span>onglongbel.raumasmp.online</span>
+                        <span>olongbel.raumasmp.online</span>
+                        <i class="fa-regular fa-copy copy-mini-icon"></i>
+                    </div>
+                </div>
+
+                <!-- Live Server Radar & Active Player Roster Card -->
+                <div class="hero-mc-radar" id="hero-mc-radar">
+                    <div class="radar-header">
+                        <div class="radar-status-badge" id="radar-status-badge">
+                            <span class="radar-status-dot" id="radar-status-dot"></span>
+                            <span class="radar-status-title" id="radar-status-title">Đang kiểm tra...</span>
+                        </div>
+                        <div class="radar-version-tag" id="radar-version-tag">
+                            <i class="fa-solid fa-cube"></i> <span id="radar-version-text">26.2 Fabric</span>
+                        </div>
+                    </div>
+
+                    <div class="radar-capacity-wrap">
+                        <div class="radar-capacity-labels">
+                            <span class="radar-capacity-label"><i class="fa-solid fa-users"></i> Người chơi đang online</span>
+                            <span class="radar-capacity-numbers">
+                                <strong id="radar-online-count">0</strong>
+                                <span class="radar-max-count">/ <span id="radar-max-count">20</span></span>
+                            </span>
+                        </div>
+                        <div class="radar-progress-track">
+                            <div class="radar-progress-fill" id="radar-progress-fill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Active Players Head Avatars Grid / List -->
+                    <div class="radar-players-container">
+                        <div class="radar-players-header">
+                            <span><i class="fa-solid fa-compass"></i> Đang thám hiểm thế giới:</span>
+                        </div>
+                        <div class="radar-players-roster" id="radar-players-roster">
+                            <div class="radar-loading-players">
+                                <i class="fa-solid fa-circle-notch fa-spin"></i> Đang kết nối máy chủ...
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -321,9 +365,9 @@
                         Để tham gia máy chủ OlongBell, bạn cần cài đặt đúng bộ Mod tương thích. Nhằm tối giản hóa các bước cài đặt thủ công phức tạp, chúng tôi cung cấp trình cài đặt tự động.
                     </p>
                     <ul class="install-steps">
-                        <li><span class="step-num">1</span> Sao chép câu lệnh PowerShell bên cạnh.</li>
-                        <li><span class="step-num">2</span> Nhấn phím <kbd>Windows</kbd>, gõ <strong>PowerShell</strong> và nhấn <kbd>Enter</kbd>.</li>
-                        <li><span class="step-num">3</span> Chuột phải (hoặc nhấn <kbd>Ctrl + V</kbd>) để dán câu lệnh và nhấn <kbd>Enter</kbd>.</li>
+                        <li><span class="step-num">1</span> <span class="step-text">Sao chép câu lệnh PowerShell bên cạnh.</span></li>
+                        <li><span class="step-num">2</span> <span class="step-text">Nhấn phím <kbd>Windows</kbd>, gõ <strong>PowerShell</strong> và nhấn <kbd>Enter</kbd>.</span></li>
+                        <li><span class="step-num">3</span> <span class="step-text">Chuột phải (hoặc nhấn <kbd>Ctrl + V</kbd>) để dán câu lệnh và nhấn <kbd>Enter</kbd>.</span></li>
                     </ul>
                     <div class="install-note">
                         <i class="fa-solid fa-circle-info"></i>
@@ -448,12 +492,29 @@
         </div>
     </div>
 
+    <!-- Donate QR Modal Overlay -->
+    <div id="donate-modal" class="modal-overlay hidden">
+        <div class="modal-card donate-modal-card">
+            <button id="close-donate-modal-btn" class="close-modal-btn" aria-label="Close Modal">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="donate-modal-content">
+                <h3 class="donate-title">Cảm ơn bạn đã ủng hộ OlongBell! <i class="fa-solid fa-heart"></i></h3>
+                <p class="donate-sub">Quét mã QR dưới đây để ủng hộ cho đội ngũ phát triển sivi nhéee &lt;3</p>
+                <div class="donate-qr-wrapper">
+                    <img src="assets/donate.png" alt="Donate QR Code" class="donate-qr-img">
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- GSAP & ScrollTrigger CDN Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
     <!-- JavaScript Files -->
     <script src="scripts/changelogs-data.js"></script>
+    <script src="scripts/minecraft-server.js"></script>
     <script src="scripts/gsap-carousel.js"></script>
     <script src="scripts/cursor-effect.js"></script>
     <script src="scripts/hero-interactions.js"></script>

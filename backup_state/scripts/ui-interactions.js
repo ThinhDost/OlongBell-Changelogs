@@ -12,6 +12,9 @@ class UIInteractions {
         this.modalContent = document.getElementById('modal-content');
         this.closeModalBtn = document.getElementById('close-modal-btn');
         this.themeToggleBtn = document.getElementById('theme-toggle');
+        this.donateBtn = document.getElementById('donate-btn');
+        this.donateModal = document.getElementById('donate-modal');
+        this.closeDonateModalBtn = document.getElementById('close-donate-modal-btn');
         this.copyIpBtn = document.getElementById('copy-ip-btn');
         this.sneakpeeksList = document.getElementById('sneakpeeks-list');
 
@@ -52,7 +55,7 @@ class UIInteractions {
         this.renderChangelogs();
         this.renderSneakPeeks();
         this.setupEventListeners();
-        this.startOnlinePlayerSimulator();
+        this.initMinecraftServerIntegration();
         this.checkInitialDeepLink();
         this.updateVoteUIAuth();
         this.loadModsAndVotes();
@@ -156,16 +159,24 @@ class UIInteractions {
         }
 
         // Copy IP Listener (Hiện toast thông báo trực quan cho người dùng)
-        if (this.copyIpBtn) {
-            this.copyIpBtn.addEventListener('click', () => {
-                const ipText = 'onglongbel.raumasmp.online';
-                navigator.clipboard.writeText(ipText).then(() => {
-                    this.showToast('Đã sao chép địa chỉ IP máy chủ! 📋');
-                }).catch(() => {
-                    // Dự phòng nếu trình duyệt chặn Clipboard API
-                    this.showToast('Địa chỉ IP: onglongbel.raumasmp.online');
-                });
+        const copyServerIPHandler = () => {
+            const ipText = (window.mcServerManager && window.mcServerManager.displayAddress) 
+                ? window.mcServerManager.displayAddress 
+                : 'olongbel.raumasmp.online';
+            navigator.clipboard.writeText(ipText).then(() => {
+                this.showToast(`Đã sao chép IP máy chủ: ${ipText} 📋`);
+            }).catch(() => {
+                this.showToast(`Địa chỉ IP: ${ipText}`);
             });
+        };
+
+        if (this.copyIpBtn) {
+            this.copyIpBtn.addEventListener('click', copyServerIPHandler);
+        }
+
+        const heroCopyPill = document.getElementById('hero-copy-ip-pill');
+        if (heroCopyPill) {
+            heroCopyPill.addEventListener('click', copyServerIPHandler);
         }
 
         // Copy PowerShell command listener
@@ -199,6 +210,21 @@ class UIInteractions {
             });
         }
 
+        // Donate Button Click
+        if (this.donateBtn) {
+            this.donateBtn.addEventListener('click', () => this.openDonateModal());
+        }
+
+        // Close Donate Modal
+        if (this.closeDonateModalBtn) {
+            this.closeDonateModalBtn.addEventListener('click', () => this.closeDonateModal());
+        }
+        if (this.donateModal) {
+            this.donateModal.addEventListener('click', (e) => {
+                if (e.target === this.donateModal) this.closeDonateModal();
+            });
+        }
+
         // ESC Key to Close Modal
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
@@ -208,6 +234,9 @@ class UIInteractions {
                 const authModal = document.getElementById('auth-modal');
                 if (authModal && !authModal.classList.contains('hidden')) {
                     this.closeAuthModal();
+                }
+                if (this.donateModal && !this.donateModal.classList.contains('hidden')) {
+                    this.closeDonateModal();
                 }
             }
         });
@@ -223,6 +252,13 @@ class UIInteractions {
                 }
             } else {
                 this.closeModal(false);
+            }
+
+            const donateParam = params.get('donate');
+            if (donateParam === 'true') {
+                this.openDonateModal(false);
+            } else {
+                this.closeDonateModal(false);
             }
         });
 
@@ -540,16 +576,177 @@ class UIInteractions {
         }
     }
 
-    startOnlinePlayerSimulator() {
-        const countEl = document.getElementById('player-count');
-        if (!countEl) return;
+    openDonateModal(pushState = true) {
+        if (!this.donateModal) return;
+        this.donateModal.classList.remove('hidden');
+        void this.donateModal.offsetWidth; // Force reflow
+        this.donateModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
 
-        let baseCount = 342;
-        setInterval(() => {
-            const delta = Math.floor(Math.random() * 7) - 3;
-            baseCount = Math.max(280, Math.min(500, baseCount + delta));
-            countEl.innerText = baseCount;
-        }, 4000);
+        if (pushState) {
+            const newUrl = window.location.origin + window.location.pathname + '?donate=true';
+            window.history.pushState({ donate: true }, '', newUrl);
+        }
+    }
+
+    closeDonateModal(pushState = true) {
+        if (!this.donateModal) return;
+        this.donateModal.classList.remove('active');
+        setTimeout(() => {
+            this.donateModal.classList.add('hidden');
+            // Only re-enable scrolling if other modals are closed
+            const updateModalActive = this.modal && this.modal.classList.contains('active');
+            const authModal = document.getElementById('auth-modal');
+            const authModalActive = authModal && authModal.classList.contains('active');
+            if (!updateModalActive && !authModalActive) {
+                document.body.style.overflow = '';
+            }
+        }, 320);
+
+        if (pushState) {
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.pushState({ donate: null }, '', cleanUrl);
+        }
+    }
+
+    initMinecraftServerIntegration() {
+        if (typeof window.mcServerManager === 'undefined') {
+            console.warn('[MC Integration] mcServerManager not loaded.');
+            return;
+        }
+
+        // Đăng ký nhận cập nhật trạng thái
+        window.mcServerManager.subscribe((state) => {
+            this.renderMinecraftServerTelemetry(state);
+        });
+
+        // Bắt đầu chu kỳ polling tự động
+        window.mcServerManager.start();
+    }
+
+    renderMinecraftServerTelemetry(state) {
+        // 1. Cập nhật Đèn trạng thái trên Navbar
+        const navDot = document.getElementById('nav-status-dot');
+        if (navDot) {
+            navDot.className = 'ip-status-dot';
+            if (state.loading) {
+                navDot.classList.add('loading');
+            } else if (state.online) {
+                navDot.classList.add('online');
+            } else {
+                navDot.classList.add('offline');
+            }
+        }
+
+        // 2. Cập nhật Hero Live Badge
+        const heroCount = document.getElementById('player-count');
+        const heroMax = document.getElementById('player-max');
+        const heroDot = document.getElementById('hero-live-dot');
+        const heroLiveText = document.getElementById('hero-live-text');
+
+        if (heroCount) {
+            heroCount.innerText = state.loading ? '--' : state.onlinePlayers;
+        }
+        if (heroMax) {
+            heroMax.innerText = state.loading ? '--' : state.maxPlayers;
+        }
+        if (heroDot) {
+            if (state.loading) {
+                heroDot.style.background = '#f59e0b';
+                heroDot.style.boxShadow = '0 0 10px rgba(245, 158, 11, 0.6)';
+            } else if (state.online) {
+                heroDot.style.background = 'var(--accent-green)';
+                heroDot.style.boxShadow = '0 0 10px var(--accent-green)';
+            } else {
+                heroDot.style.background = '#ef4444';
+                heroDot.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.6)';
+            }
+        }
+
+        if (heroLiveText && !state.loading) {
+            if (!state.online) {
+                heroLiveText.innerHTML = '<span style="color: #ef4444;">Server Ngoại tuyến</span>';
+            } else {
+                heroLiveText.innerHTML = `<strong id="player-count">${state.onlinePlayers}</strong> / <span id="player-max">${state.maxPlayers}</span> Online`;
+            }
+        }
+
+        // 3. Cập nhật Hero Live Server Radar & Player Roster Widget
+        const radarDot = document.getElementById('radar-status-dot');
+        const radarTitle = document.getElementById('radar-status-title');
+        const radarOnline = document.getElementById('radar-online-count');
+        const radarMax = document.getElementById('radar-max-count');
+        const radarFill = document.getElementById('radar-progress-fill');
+        const radarRoster = document.getElementById('radar-players-roster');
+        const radarVersion = document.getElementById('radar-version-text');
+
+        if (radarVersion && state.version) {
+            radarVersion.innerText = state.version;
+        }
+
+        if (radarDot && radarTitle) {
+            if (state.loading) {
+                radarDot.className = 'radar-status-dot';
+                radarTitle.className = 'radar-status-title';
+                radarTitle.innerText = 'Đang kiểm tra...';
+            } else if (state.online) {
+                radarDot.className = 'radar-status-dot online';
+                radarTitle.className = 'radar-status-title online';
+                radarTitle.innerText = 'Trực tuyến & Sẵn sàng';
+            } else {
+                radarDot.className = 'radar-status-dot offline';
+                radarTitle.className = 'radar-status-title offline';
+                radarTitle.innerText = 'Bảo trì / Ngoại tuyến';
+            }
+        }
+
+        if (radarOnline) radarOnline.innerText = state.onlinePlayers;
+        if (radarMax) radarMax.innerText = state.maxPlayers;
+        if (radarFill) {
+            const percent = (state.maxPlayers > 0) ? Math.min(100, (state.onlinePlayers / state.maxPlayers) * 100) : 0;
+            radarFill.style.width = `${percent}%`;
+        }
+
+        if (radarRoster) {
+            if (state.loading) {
+                radarRoster.innerHTML = `
+                    <div class="radar-loading-players">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> Đang kết nối máy chủ...
+                    </div>
+                `;
+            } else if (!state.online) {
+                radarRoster.innerHTML = `
+                    <div class="radar-empty-hint">
+                        <i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i> Máy chủ đang tạm ngắt kết nối.
+                    </div>
+                `;
+            } else if (state.players && state.players.length > 0) {
+                let chipsHtml = '';
+                state.players.forEach(p => {
+                    const pName = p.name || 'Anonymous';
+                    const avatarUrl = window.mcServerManager.getPlayerAvatarUrl(pName, 24);
+                    chipsHtml += `
+                        <div class="radar-player-chip" title="Người chơi: ${pName}">
+                            <img class="radar-player-head" src="${avatarUrl}" alt="${pName}" loading="lazy" onerror="this.src='https://minotar.net/avatar/${encodeURIComponent(pName)}/24'">
+                            <span class="radar-player-name">${pName}</span>
+                        </div>
+                    `;
+                });
+                radarRoster.innerHTML = chipsHtml;
+            } else if (state.onlinePlayers > 0) {
+                radarRoster.innerHTML = `
+                    <div class="radar-empty-hint">
+                        <i class="fa-solid fa-user-secret" style="color: var(--accent-cyan);"></i> Có ${state.onlinePlayers} người chơi đang thám hiểm thế giới.
+                    </div>
+                `;
+            } else {
+                radarRoster.innerHTML = `
+                    <div class="radar-empty-hint">
+                        <i class="fa-regular fa-moon" style="color: var(--primary);"></i> Thế giới đang yên bình, hãy là người đầu tiên tham gia!
+                    </div>
+                `;
+            }
+        }
     }
 
     getYouTubeId(url) {
@@ -889,6 +1086,13 @@ class UIInteractions {
                     this.openModal(log, false);
                 }, 2600); // 1.8s progress bar + 0.8s fade out
             }
+        }
+
+        const donateParam = params.get('donate');
+        if (donateParam === 'true') {
+            setTimeout(() => {
+                this.openDonateModal(false);
+            }, 2600);
         }
     }
 
