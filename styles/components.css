@@ -1416,6 +1416,8 @@
     justify-content: center;
     align-items: center;
     transition: opacity 0.8s ease, visibility 0.8s ease;
+    cursor: pointer;
+    user-select: none;
 }
 
 .intro-content {
@@ -1459,6 +1461,25 @@
     background: var(--accent-cyan);
     box-shadow: 0 0 10px var(--accent-cyan-light);
     border-radius: 4px;
+}
+
+.intro-wake-hint {
+    margin-top: 6px;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    color: var(--accent-cyan);
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.85;
+    animation: pulse-wake 2s infinite ease-in-out;
+    pointer-events: none;
+}
+
+@keyframes pulse-wake {
+    0%, 100% { opacity: 0.45; transform: translateY(0); }
+    50% { opacity: 1; transform: translateY(-2px); text-shadow: 0 0 10px rgba(0, 240, 255, 0.6); }
 }
 
 /* ==========================================================================

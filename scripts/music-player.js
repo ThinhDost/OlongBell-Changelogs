@@ -235,6 +235,24 @@ class OlongBellMusicPlayer {
     }
 
     setupAutoplayListener() {
+        // Thực hiện nạp và phát một bài hát ngẫu nhiên
+        const startBgmPlayback = () => {
+            if (this.isPlaying) return;
+            const randomIndex = Math.floor(Math.random() * this.playlist.length);
+            this.loadTrack(randomIndex);
+            
+            this.audio.volume = 0.25;
+            if (this.volumeSlider) this.volumeSlider.value = 0.25;
+            if (this.volumePercentage) this.volumePercentage.textContent = "25%";
+            this.updateVolumeIcon(0.25);
+            localStorage.setItem('music_volume', 0.25);
+
+            this.play().then(() => {
+                this.autoplayTriggered = true;
+                removeEvents();
+            }).catch(() => {});
+        };
+
         // Sử dụng các tương tác hợp lệ của người dùng để bắt đầu phát nhạc ngay khi màn hình loading kết thúc
         const triggerAutoplay = () => {
             if (this.autoplayTriggered) return;
@@ -242,20 +260,21 @@ class OlongBellMusicPlayer {
             const introScreen = document.getElementById('intro-screen');
             if (!introScreen || introScreen.style.display === 'none' || window.getComputedStyle(introScreen).opacity === '0') {
                 this.autoplayTriggered = true;
-                
-                // CHƠI RANDOM 1 TRONG CÁC BÀI KHI VÀO TRANG XONG
-                const randomIndex = Math.floor(Math.random() * this.playlist.length);
-                this.loadTrack(randomIndex);
-                
-                // ĐẶT ÂM LƯỢNG 25%
-                this.audio.volume = 0.25;
-                if (this.volumeSlider) this.volumeSlider.value = 0.25;
-                if (this.volumePercentage) this.volumePercentage.textContent = "25%";
-                this.updateVolumeIcon(0.25);
-                localStorage.setItem('music_volume', 0.25);
 
-                this.play().catch(() => {});
-                removeEvents();
+                // Nếu Intro Voice đang phát, đợi giọng nói dứt hẳn rồi mới mở nhạc nền BGM
+                if (window.isIntroVoicePlaying) {
+                    const onVoiceEnd = () => {
+                        window.removeEventListener('introVoiceEnded', onVoiceEnd);
+                        startBgmPlayback();
+                    };
+                    window.addEventListener('introVoiceEnded', onVoiceEnd, { once: true });
+                    // Dự phòng nếu không bắt được sự kiện ended sau 3.0s:
+                    setTimeout(() => {
+                        if (!this.isPlaying) startBgmPlayback();
+                    }, 3000);
+                } else {
+                    startBgmPlayback();
+                }
             }
         };
 
@@ -275,21 +294,13 @@ class OlongBellMusicPlayer {
         // Kích hoạt autoplay sau 5.0 giây nếu trình duyệt cho phép phát tự động mà không cần click (để tránh đè nhạc lên Intro-Voice)
         setTimeout(() => {
             if (!this.autoplayTriggered) {
-                const randomIndex = Math.floor(Math.random() * this.playlist.length);
-                this.loadTrack(randomIndex);
-                
-                this.audio.volume = 0.25;
-                if (this.volumeSlider) this.volumeSlider.value = 0.25;
-                if (this.volumePercentage) this.volumePercentage.textContent = "25%";
-                this.updateVolumeIcon(0.25);
-                localStorage.setItem('music_volume', 0.25);
-
-                this.play().then(() => {
-                    this.autoplayTriggered = true;
-                    removeEvents();
-                }).catch(() => {
-                    console.log("⚠️ Autoplay bị chặn bởi chính sách trình duyệt. Chờ tương tác từ người dùng.");
-                });
+                if (window.isIntroVoicePlaying) {
+                    window.addEventListener('introVoiceEnded', () => {
+                        if (!this.autoplayTriggered) startBgmPlayback();
+                    }, { once: true });
+                } else {
+                    startBgmPlayback();
+                }
             }
         }, 5000);
     }
